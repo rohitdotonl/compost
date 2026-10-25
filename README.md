@@ -36,47 +36,45 @@ screen on purpose: change a constant, redeploy.
 | `public/api.js` | The passcode and API helper both pages share |
 | `public/bookmarklet.html`, `bookmarklet.js` | Shows the bookmarklet with your address filled in |
 | `setup.sh` | Logs in, deploys and sets the passcode in one go |
-| `.dev.vars.example` | Tells the Deploy button to ask for `PASSCODE` |
+| `.dev.vars.example`, `package.json` | Tell the Deploy button to ask for `PASSCODE` and label its form. There are no dependencies |
 | `public/strings.js` | All user-facing copy |
 | `public/manifest.webmanifest`, `sw.js`, `icons/` | PWA install and the Android share target |
 
 ## Set it up
 
-You need a free Cloudflare account. There are no other accounts, keys or
-services. The database is created for you on the first deploy, and the Worker
-creates its own table the first time it runs.
+You need a free Cloudflare account and nothing else. The database is created
+for you on the first deploy, and the app creates its own table the first time
+it runs.
 
-Pick one of these three ways.
-
-### Option A: the Cloudflare dashboard (no terminal)
-
-This also redeploys automatically every time `main` changes.
-
-1. In the [Cloudflare dashboard](https://dash.cloudflare.com), go to
-   **Workers & Pages → Create → Import a repository**, connect GitHub and pick
-   this repository. Keep the default settings and click **Deploy**.
-2. When it finishes, open the Worker's **Settings → Variables and Secrets**,
-   add a **Secret** named `PASSCODE` with the passcode you want, and save.
-3. Open the `*.workers.dev` address shown on the Worker's page.
-
-### Option B: one script
-
-With Node.js 18 or newer installed, run this from the repository folder:
-
-```sh
-./setup.sh
-```
-
-It logs you in to Cloudflare in the browser, deploys (creating the database),
-and asks for the passcode. Run it again any time to redeploy.
-
-### Option C: the Deploy button
+### Quickest: the Deploy button
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/rohitdotonl/compost)
 
-This copies the repository into your own GitHub account, creates the database
-and asks for the passcode during setup. It suits anyone else who wants their
-own Compost.
+The form looks long, but you only type one thing: the passcode. Everything else
+can stay as it is.
+
+| On the form | What to do |
+| --- | --- |
+| Git account | Pick your GitHub account. Cloudflare copies Compost into it so it can redeploy when the code changes. |
+| Repository name | Leave as is, unless your GitHub account already has a repository called `compost` (for example, if you own this one). Then type another name, such as `compost-app`. |
+| Private repo | Leave as is. |
+| Worker or project name | Leave as `compost`. It becomes part of your address. |
+| D1 database | Leave as is ("create new", named `compost`). |
+| `PASSCODE` | **Type a passcode.** Each phone or computer asks for it once. |
+| Build command, deploy command, root directory, API token and other advanced settings | Leave empty or as filled in. |
+
+Click **Create and deploy**, wait a minute, then open the `*.workers.dev`
+address it shows.
+
+### Other ways
+
+- **Dashboard import (no copy of the repo):** in the
+  [Cloudflare dashboard](https://dash.cloudflare.com), go to
+  **Workers & Pages → Create → Import a repository**, pick this repository and
+  deploy with the defaults. Then add a **Secret** named `PASSCODE` under the
+  Worker's **Settings → Variables and Secrets**.
+- **Terminal:** with Node.js 18 or newer, run `./setup.sh` from the repository
+  folder. It logs you in, deploys and asks for the passcode.
 
 ### Changing the passcode
 

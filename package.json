@@ -1,0 +1,15 @@
+{
+  "name": "compost",
+  "private": true,
+  "description": "A read-later rack with ten slots. No dependencies; this file only labels the Deploy to Cloudflare form.",
+  "cloudflare": {
+    "bindings": {
+      "PASSCODE": {
+        "description": "**The only thing you need to type.** Pick a passcode; each phone or computer asks for it once."
+      },
+      "DB": {
+        "description": "Leave as is. Compost creates its own table in it."
+      }
+    }
+  }
+}
