@@ -12,10 +12,12 @@ import m0001 from '../migrations/0001_init.sql';
 import m0002 from '../migrations/0002_rich_rows.sql';
 import m0004 from '../migrations/0004_reader.sql';
 import m0006 from '../migrations/0006_reviews.sql';
+import m0008 from '../migrations/0008_nudges.sql';
 
 export const MIGRATIONS = [
   [1, m0001],
   [2, m0002],
   [4, m0004],
   [6, m0006],
+  [8, m0008],
 ];

@@ -1,0 +1,18 @@
+/* The daily reminder's footer line (Phase 8): as quiet as the footer. */
+.notify {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.notify p { margin: 0; }
+.notify .link { color: var(--muted); font-size: inherit; }
+.notify .link:hover, .notify .link:focus-visible { color: var(--fg); }
+.notify select {
+  font-size: inherit;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  background: var(--field, transparent);
+  color: var(--fg);
+}
+.notify-hint { margin-top: 4px !important; font-size: 0.85rem; }

@@ -5,8 +5,9 @@ one expires 7 days after you save it. Only the ones you finish are kept, in the
 Vault, with a one-line takeaway.
 
 It is one Cloudflare Worker: it serves the app, answers a tiny API and talks to
-one D1 (SQLite) database. No framework, no build step, no dependencies, no
-scheduled jobs. It fits comfortably in Cloudflare's free plan.
+one D1 (SQLite) database. No framework, no build step, no dependencies. The
+only scheduled job is the optional daily reminder's hourly check. It fits
+comfortably in Cloudflare's free plan.
 
 ## The rules
 
@@ -28,12 +29,14 @@ purpose: change a constant, redeploy.
 
 | File | Purpose |
 | --- | --- |
-| `wrangler.toml` | Worker config: static assets folder and the D1 binding |
+| `wrangler.toml` | Worker config: static assets folder, the D1 binding and the hourly Cron Trigger |
 | `migrations/NNNN_*.sql` | Numbered schema migrations; the Worker applies them itself (see below) |
 | `src/worker.js` | Entry: passcode check and the routing table |
 | `src/rules.js` | The rules as constants |
 | `src/items.js` | Rack, Vault and Heap routes: list, save, lookup and the actions |
 | `src/review.js` | The daily line, spaced review, takeaway edits and related Vault items |
+| `src/push.js`, `src/vapid.js` | The daily reminder: subscriptions, the digest, the hourly run and VAPID signing with WebCrypto |
+| `src/weekly.js` | Reading time per day and the Sunday line |
 | `src/db.js` | Runs the migrations once per Worker instance, and the expiry sweep |
 | `src/migrations.js` | The list of migration files, in order |
 | `src/page.js` | URL normalising, fetching a page for its title, description, image, favicon, author, language and reading time, and the raw HTML for the reader |
@@ -43,7 +46,8 @@ purpose: change a constant, redeploy.
 | `public/index.html`, `app.js`, `style.css` | Main page shell: header, tabs, status line |
 | `public/store.js` | State, localStorage cache, optimistic actions, row selection |
 | `public/rack.js`, `vault.js`, `heap.js` | One module per tab |
-| `public/daily.js`, `daily.css` | The daily line at the top of the Rack |
+| `public/daily.js`, `daily.css` | The daily line at the top of the Rack, and the Sunday reading-time line beneath it |
+| `public/notify.js`, `notify.css` | The daily reminder's footer line |
 | `public/format.js` | Time left in words, the expiry fade, image addresses and the row thumbnail |
 | `public/fonts/` | Self-hosted Literata (titles, takeaways) and IBM Plex Sans (everything else), latin woff2, SIL OFL |
 | `public/keys.js` | Keyboard shortcuts, paste-to-save and the `#vault?q=…` / `#item/42` links |
@@ -145,6 +149,43 @@ back but keeps it in the Vault. The pick is made on the first open of the day
 (your local date) and stored, so every device shows the same line. Nothing is
 counted. To rewrite a takeaway, click it in the Vault (or select the row and
 press `e`); Enter saves, Esc cancels.
+
+## The daily reminder
+
+Off by default. At the bottom of the app, **Daily reminder: off · Turn on**
+asks the browser for permission to notify, then for an hour (8:00 unless you
+pick another). From then on, on any day something in your rack expires within
+24 hours, you get one notification at that hour: "Two articles leave your rack
+tomorrow." Nothing on other days, never more than one a day. Clicking it opens
+the rack. **Change** picks another hour; **Turn off** stops it on that device.
+Turn it on on each device you want it on; the hour is shared.
+
+There is nothing to configure. The Worker makes its own push signing key
+(VAPID) the first time it needs one and keeps it in the database. The
+`[triggers]` block in `wrangler.toml` runs the Worker once an hour, which
+Cloudflare's free plan allows (a handful of Cron Triggers per account; this is
+24 runs a day). `setup.sh`, the Deploy button and `wrangler deploy` all pick it
+up.
+
+Where it arrives: on Android, install the app (see above) and notifications
+arrive like any app's. On a desktop, Chrome and Edge show them only while the
+browser is running; a reminder sent while it was closed waits up to 12 hours.
+iPhone is not supported. Your time zone is taken from the device
+when you turn the reminder on, and updated whenever the app is opened.
+
+The push itself carries no data. The service worker wakes up, asks
+`GET /api/digest` for the words and shows them; for that it keeps a copy of the
+passcode in the browser's Cache Storage (`compost-push`) on devices with the
+reminder on.
+
+## Reading time
+
+The reader counts seconds only while its tab is visible and you have scrolled,
+moved or pressed a key in the last minute, and adds them to that day. On
+Sundays the Rack shows one quiet line under the daily line: "You read for 3 h
+10 min this week." (that Sunday and the six days before). On other days, or
+with less than a minute read, nothing shows. There is no chart and no
+comparison.
 
 ## Keyboard (desktop)
 
@@ -267,7 +308,8 @@ curl -s -H "$P" -H 'Content-Type: application/json' \
 
 Every call needs the `X-Passcode` header and starts with the sweep: rack items
 past their expiry move to the Heap, and Heap items older than 30 days are
-deleted. That is how expiry works without a scheduled job.
+deleted. That is how expiry works without a scheduled job (the reminder's
+hourly run sweeps too, before it counts).
 
 | Method and path | Does |
 | --- | --- |
@@ -282,13 +324,19 @@ deleted. That is how expiry works without a scheduled job.
 | `GET /api/items/:id/raw` | `{url, html}`: the page's raw HTML (5s, 3MB cap) and its address after redirects, for extraction in the browser. `422` when it can't be fetched |
 | `GET /api/items/:id/content` | `{status, html, words, excerpt, byline, extracted_at, progress, last_read_at, minutes}`. `status` is `ok`, `failed` or `none` (not extracted yet) |
 | `POST /api/items/:id/content` | Stores `{html, text, words, excerpt, byline}` and sets the reading time from `words`, or `{status: 'failed'}` |
-| `POST /api/items/:id/progress` | Stores `{progress}` (0–1) and the time; `seconds` is accepted and ignored for now |
+| `POST /api/items/:id/progress` | Stores `{progress}` (0–1) and the time, and adds `seconds` (at most 120 per call) to the reading time of `day` (the device's local `YYYY-MM-DD`; the UTC date without it) |
 | `GET /api/contents` | `{contents: [{id, status, words}]}` for the rack, for background extraction |
 | `GET /api/search?q=…` | `{results: [{id, in: 'rack' \| 'vault', snippet}]}`: full-text search over titles, article text and takeaways; `snippet` is escaped HTML with `<mark>` |
 | `GET /api/daily?day=YYYY-MM-DD` | The day's line `{day, review}` (`review` is `null` with fewer than 20 takeaways); pinned per date |
 | `POST /api/reviews/:id` | `{answer}`: `keep` ("Still useful") or `retire` ("Let it go") |
 | `POST /api/items/:id/takeaway` | Rewrites a Vault item's `{takeaway}` |
 | `GET /api/items/:id/related` | Up to 3 Vault items from the same site or sharing words with it |
+| `GET /api/weekly?day=YYYY-MM-DD` | `{show, seconds}`: `show` only on a Sunday with at least 60 seconds read that day and the six before |
+| `GET /api/push/key` | `{key}`: the VAPID public key (base64url, uncompressed point) for `pushManager.subscribe` |
+| `POST /api/push/subscribe` | `{subscription, hour, tzOffset}` (`tzOffset` = minutes to add to UTC): stores the browser's subscription and turns the reminder on; also changes the hour |
+| `POST /api/push/unsubscribe` | `{endpoint}`: forgets that browser; with none left, the reminder is off |
+| `GET /api/push/status?endpoint=…` | `{enabled, hour, tzOffset, subscribed}` |
+| `GET /api/digest` | `{text, count}`: the rack items expiring within 24 hours and the notification's words (`text` is `null` with none) |
 | `POST /api/items/:id/note` | Sets `{note}` (up to 200 characters; empty clears it) on a rack item |
 | `POST /api/items/:id/refresh` | Fetches the page again for its details; what it can't find keeps its old value |
 | `GET /img?u=…` | The image proxy (see below). Not under `/api/` and needs no header |

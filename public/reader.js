@@ -14,11 +14,12 @@
 //   currentArticle()         the same fields for the open article, or null
 // activeSeconds counts reading time: it pauses while the tab is hidden or
 // after 60s without input, and goes to the server with each progress save
-// as `seconds` (Phase 8 records it; the Worker ignores it until then).
+// as `seconds` with the local `day` (Phase 8 adds it to that day's reading time).
 import { S } from './strings.js';
 import { api, el, getPasscode } from './api.js';
 import * as store from './store.js';
 import { imgSrc, timeLeft } from './format.js';
+import { localDay } from './daily.js';
 
 const ROUTE = /^#read\/(\d+)$/;
 const PREFS_KEY = 'compost.reader';
@@ -548,7 +549,7 @@ function saveProgress(keepalive) {
     method: 'POST',
     keepalive,
     headers: { 'Content-Type': 'application/json', 'X-Passcode': getPasscode() },
-    body: JSON.stringify({ progress, seconds }),
+    body: JSON.stringify({ progress, seconds, day: localDay() }),
   })
     .then((res) => { if (!res.ok && res.status !== 404) pendingSeconds += seconds; })
     .catch(() => { pendingSeconds += seconds; });

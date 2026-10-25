@@ -9,13 +9,15 @@ import { createVaultPanel } from './vault.js';
 import { createHeapPanel } from './heap.js';
 import { parseHash, startKeys } from './keys.js';
 import { createReader } from './reader.js';
-import { createDaily } from './daily.js';
+import { createDaily, createWeekly } from './daily.js';
+import { createNotify } from './notify.js';
 
 const TABS = ['rack', 'vault', 'heap'];
 const root = document.getElementById('app');
 let ui = null; // persistent elements, built once per unlock
 let reader = null; // Phase 4: the reader at #read/42, built once
 let daily = null; // the daily line at the top of the Rack (daily.js)
+let weekly = null; // Phase 8: the Sunday reading-time line beneath it
 
 async function start() {
   if (!getPasscode()) await askPasscode(root, S);
@@ -29,6 +31,7 @@ async function start() {
     if (document.visibilityState === 'visible' && ui) {
       refresh();
       daily.load();
+      weekly.load();
     }
   });
 
@@ -76,9 +79,14 @@ function buildShell() {
   daily = createDaily();
   panels.rack.element.prepend(daily.element);
   daily.load();
+  weekly = createWeekly();
+  daily.element.after(weekly.element);
+  weekly.load();
+  const notify = createNotify(); // Phase 8: the daily reminder's footer line
+  notify.load();
   const header = el('header', {}, el('h1', {}, S.appName), nav);
   const footer = el('p', { className: 'footer' }, el('a', { href: '/bookmarklet', className: 'quiet' }, S.bookmarkletLink));
-  root.replaceChildren(header, status, ...TABS.map((t) => panels[t].element), footer);
+  root.replaceChildren(header, status, ...TABS.map((t) => panels[t].element), footer, notify.element);
   ui = { links, status, panels };
   render(store.getState());
 }
