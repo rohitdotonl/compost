@@ -61,9 +61,10 @@ purpose: change a constant, redeploy.
 ## Migrations
 
 The schema lives in `migrations/` as numbered SQL files. On its first API call
-after a deploy, the Worker reads `schema_version` from the `meta` table and
-applies every file above it, in order, each as one `db.batch` (a transaction),
-then records the new number. Nothing to run by hand: `setup.sh`, the Deploy
+after a deploy, the Worker checks which numbers the `meta` table records
+(`migration:N`) and applies every file not yet recorded, in order, each as one
+`db.batch` (a transaction) that also records its number. A lower number that
+lands after a higher one still runs. Nothing to run by hand: `setup.sh`, the Deploy
 button and `wrangler deploy` all stay one step. A database created by V1 is
 picked up as it is, since `0001_init.sql` only creates what is missing.
 

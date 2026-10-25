@@ -3,9 +3,9 @@ import { MIGRATIONS } from './migrations.js';
 import { HEAP_KEEP } from './rules.js';
 
 const META_TABLE = `CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`;
-const VERSION_KEY = 'schema_version';
+const KEY_PREFIX = 'migration:';
 
-// Applies every migration above the recorded version, each as one batch
+// Applies every migration not yet recorded, each as one batch
 // (D1 runs a batch as a transaction, so a failure leaves nothing half done).
 // Runs once per Worker instance; a failure clears the memo so the next
 // request tries again.
@@ -25,13 +25,15 @@ export function migrate(db) {
 
 async function runMigrations(db) {
   await db.prepare(META_TABLE).run();
-  const row = await db.prepare(`SELECT value FROM meta WHERE key = ?`).bind(VERSION_KEY).first();
-  const applied = Number((row && row.value) || 0);
+  // Each migration is recorded on its own, so one that lands after a higher
+  // number was applied (phases merged out of order) still runs.
+  const { results } = await db.prepare(`SELECT key FROM meta WHERE key LIKE ?`).bind(`${KEY_PREFIX}%`).all();
+  const applied = new Set(results.map((r) => Number(r.key.slice(KEY_PREFIX.length))));
   for (const [number, sql] of MIGRATIONS) {
-    if (number <= applied) continue;
+    if (applied.has(number)) continue;
     await db.batch([
       ...splitStatements(sql).map((s) => db.prepare(s)),
-      db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`).bind(VERSION_KEY, String(number)),
+      db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`).bind(KEY_PREFIX + number, String(Date.now())),
     ]);
   }
 }
