@@ -56,7 +56,8 @@ can stay as it is.
 | On the form | What to do |
 | --- | --- |
 | Git account | Pick your GitHub account. Cloudflare copies Compost into it so it can redeploy when the code changes. |
-| Repository name, private repo | Leave as is. |
+| Repository name | Leave as is, unless your GitHub account already has a repository called `compost` (for example, if you own this one). Then type another name, such as `compost-app`. |
+| Private repo | Leave as is. |
 | Worker or project name | Leave as `compost`. It becomes part of your address. |
 | D1 database | Leave as is ("create new", named `compost`). |
 | `PASSCODE` | **Type a passcode.** Each phone or computer asks for it once. |
