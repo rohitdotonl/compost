@@ -20,18 +20,27 @@ scheduled jobs. It fits comfortably in Cloudflare's free plan.
 | Heap | Everything tossed, dropped or expired. Purged after 30 days. No restore. |
 | Vault | Done articles only. Permanent. |
 
-The rules are constants at the top of [`src/worker.js`](src/worker.js). All
-the copy lives in [`public/strings.js`](public/strings.js). There is no settings
-screen on purpose: change a constant, redeploy.
+The rules are constants in [`src/rules.js`](src/rules.js). All the copy lives
+in [`public/strings.js`](public/strings.js). There is no settings screen on
+purpose: change a constant, redeploy.
 
 ## Files
 
 | File | Purpose |
 | --- | --- |
 | `wrangler.toml` | Worker config: static assets folder and the D1 binding |
-| `schema.sql` | The one table, `items`. The Worker applies it itself on first run |
-| `src/worker.js` | API routes, rules, expiry sweep, title fetching |
-| `public/index.html`, `app.js`, `style.css` | Main page: Rack, Vault and Heap tabs |
+| `migrations/NNNN_*.sql` | Numbered schema migrations; the Worker applies them itself (see below) |
+| `src/worker.js` | Entry: passcode check and the routing table |
+| `src/rules.js` | The rules as constants |
+| `src/items.js` | Rack, Vault and Heap routes: list, save, lookup and the actions |
+| `src/db.js` | Runs the migrations once per Worker instance, and the expiry sweep |
+| `src/migrations.js` | The list of migration files, in order |
+| `src/page.js` | URL normalising, fetching a page for its title and reading time |
+| `src/http.js` | JSON responses, body reading, passcode comparison |
+| `public/index.html`, `app.js`, `style.css` | Main page shell: header, tabs, status line |
+| `public/store.js` | State, localStorage cache, optimistic actions, row selection |
+| `public/rack.js`, `vault.js`, `heap.js` | One module per tab |
+| `public/format.js` | Dates and the expiry fade |
 | `public/save.html`, `save.js` | Save page used by the share menu and the bookmarklet |
 | `public/api.js` | The passcode and API helper both pages share |
 | `public/bookmarklet.html`, `bookmarklet.js` | Shows the bookmarklet with your address filled in |
@@ -39,12 +48,27 @@ screen on purpose: change a constant, redeploy.
 | `.dev.vars.example` | Tells the Deploy button to ask for `PASSCODE` |
 | `public/strings.js` | All user-facing copy |
 | `public/manifest.webmanifest`, `sw.js`, `icons/` | PWA install and the Android share target |
+| `tests/` | `node --test` suite with a D1-shaped adapter over `node:sqlite` |
+
+## Migrations
+
+The schema lives in `migrations/` as numbered SQL files. On its first API call
+after a deploy, the Worker reads `schema_version` from the `meta` table and
+applies every file above it, in order, each as one `db.batch` (a transaction),
+then records the new number. Nothing to run by hand: `setup.sh`, the Deploy
+button and `wrangler deploy` all stay one step. A database created by V1 is
+picked up as it is, since `0001_init.sql` only creates what is missing.
+
+To add a column: drop `migrations/0002_whatever.sql` in the folder, add one
+line for it to the list in `src/migrations.js`, deploy. Numbers only go up;
+gaps are fine. One statement per `;` (a `CREATE TRIGGER … BEGIN … END;` body
+stays whole).
 
 ## Set it up
 
 You need a free Cloudflare account. There are no other accounts, keys or
 services. The database is created for you on the first deploy, and the Worker
-creates its own table the first time it runs.
+creates its own tables the first time it runs.
 
 Pick one of these three ways.
 
@@ -119,6 +143,17 @@ npx wrangler dev
 
 Then open http://localhost:8787. `.dev.vars` is git-ignored.
 
+The tests need nothing installed beyond Node 22:
+
+```sh
+npm test
+```
+
+They run the real Worker code (`src/worker.js` and everything under it)
+against an in-memory SQLite database through a small D1-shaped adapter
+(`tests/d1.js`), with the clock injected, so expiry and the Heap purge are
+checked without waiting. Page parsing uses the HTML in `tests/fixtures/`.
+
 Some quick API checks with curl:
 
 ```sh
@@ -142,14 +177,18 @@ deleted. That is how expiry works without a scheduled job.
 | --- | --- |
 | `GET /api/items` | Returns `rack` (expiring soonest first), `vault` and `heap` |
 | `POST /api/items` | Saves `{url, dropId?}`. `409` with the rack list when full and no `dropId` |
+| `GET /api/lookup?url=…` | `{status: 'in_rack' | 'in_vault' | 'new', id?}` for the browser extension |
 | `POST /api/items/:id/intent` | Sets `{intent}`: `tonight`, `commute`, `weekend` or `null` |
 | `POST /api/items/:id/done` | Moves to the Vault with `{takeaway?}` |
 | `POST /api/items/:id/toss` | Moves to the Heap |
+| `POST /api/items/:id/untoss` | Reverses a toss, only within 10 seconds of it and only while a slot is free (the Undo; not a Heap restore) |
 | `POST /api/items/:id/extend` | Adds 48 hours, once |
 
 A save answers with `status`: `saved`, `in_rack`, `in_vault`, `full` or
 `invalid_url`. URLs are normalised before comparing (tracking parameters such as
-`utm_*` and `fbclid` and the `#fragment` are removed).
+`utm_*` and `fbclid` and the `#fragment` are removed). Every action answers
+with `{ok, item, used, limit}`: the item as it now is and the slot count, so
+the app updates one row instead of refetching the list.
 
 ## Is it working?
 
