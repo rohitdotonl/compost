@@ -22,10 +22,16 @@ export const S = {
   toss: 'Toss',
   extend: '+48h',
   minutes: (n) => `${n} min`,
-  expiresToday: 'expires today',
-  expiresTomorrow: 'expires tomorrow',
-  daysLeft: (n) => `${n} days left`,
+  expiresToday: { morning: 'expires this morning', afternoon: 'expires this afternoon', evening: 'expires tonight' },
+  dayParts: { morning: 'morning', afternoon: 'afternoon', evening: 'evening' },
+  untilTomorrow: (part) => `until tomorrow${part ? ` ${part}` : ''}`,
+  untilDay: (day, part) => `until ${day}${part ? ` ${part}` : ''}`,
+  untilNext: (day) => `until next ${day}`,
   intents: { tonight: 'Tonight', commute: 'Commute', weekend: 'Weekend' },
+  intentLabel: 'When?',
+  intentNone: 'Any time',
+  refreshDetails: 'Refresh details',
+  refreshNothing: 'Couldn’t find more about that page.',
 
   // Done
   takeawayPrompt: 'What’s the one takeaway worth keeping?',
@@ -55,7 +61,7 @@ export const S = {
 
   // Save page
   saving: 'Saving…',
-  savedReceipt: (used, limit, weekday) => `Slot ${used} of ${limit} used. Expires ${weekday}.`,
+  slotReceipt: (used, limit, until) => `Slot ${used} of ${limit} · ${until}`,
   intentQuestion: 'When will you read it?',
   close: 'Close',
   alreadyInRack: 'Already in your rack',

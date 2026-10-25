@@ -8,6 +8,9 @@ const SHELL = [
   '/keys.js', '/palette.js', '/palette.css', '/search.js', '/export.js', '/zip.js',
   '/shelf.js', '/shelf.css',
   '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png',
+  '/fonts/literata-latin-wght-normal.woff2', '/fonts/literata-latin-wght-italic.woff2',
+  '/fonts/ibm-plex-sans-latin-400-normal.woff2', '/fonts/ibm-plex-sans-latin-400-italic.woff2',
+  '/fonts/ibm-plex-sans-latin-500-normal.woff2',
 ];
 
 self.addEventListener('install', (event) => {

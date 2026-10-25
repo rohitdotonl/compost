@@ -80,13 +80,14 @@ export function createVaultPanel() {
     list.replaceChildren(...items.map(row));
   }
 
+  // The takeaway is what was earned, so it leads; the title follows, small.
   function row(item) {
     return el(
       'li',
-      { className: 'item', dataset: { id: String(item.id) } },
+      { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}`, dataset: { id: String(item.id) } },
+      item.takeaway ? el('blockquote', { className: 'takeaway-text' }, item.takeaway) : null,
       el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.title),
-      el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`),
-      item.takeaway ? el('blockquote', {}, item.takeaway) : null
+      el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`)
     );
   }
 
