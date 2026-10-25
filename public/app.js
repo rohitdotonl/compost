@@ -8,10 +8,12 @@ import { createRackPanel } from './rack.js';
 import { createVaultPanel } from './vault.js';
 import { createHeapPanel } from './heap.js';
 import { parseHash, startKeys } from './keys.js';
+import { createDaily } from './daily.js';
 
 const TABS = ['rack', 'vault', 'heap'];
 const root = document.getElementById('app');
 let ui = null; // persistent elements, built once per unlock
+let daily = null; // the daily line at the top of the Rack (daily.js)
 
 async function start() {
   if (!getPasscode()) await askPasscode(root, S);
@@ -21,7 +23,10 @@ async function start() {
   window.addEventListener('hashchange', () => render(store.getState()));
   startKeys({ panels: () => ui && ui.panels, currentTab, render: () => render(store.getState()) });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && ui) refresh();
+    if (document.visibilityState === 'visible' && ui) {
+      refresh();
+      daily.load();
+    }
   });
 
   // Paint the last known list at once, then refresh behind it.
@@ -65,6 +70,9 @@ function buildShell() {
   }
   const status = el('p', { className: 'status', role: 'status', 'aria-live': 'polite' });
   const panels = { rack: createRackPanel(), vault: createVaultPanel(), heap: createHeapPanel() };
+  daily = createDaily();
+  panels.rack.element.prepend(daily.element);
+  daily.load();
   const header = el('header', {}, el('h1', {}, S.appName), nav);
   const footer = el('p', { className: 'footer' }, el('a', { href: '/bookmarklet', className: 'quiet' }, S.bookmarkletLink));
   root.replaceChildren(header, status, ...TABS.map((t) => panels[t].element), footer);

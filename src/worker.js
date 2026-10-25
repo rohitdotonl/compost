@@ -8,6 +8,7 @@ import { migrate, sweep } from './db.js';
 import { json, safeEqual } from './http.js';
 import { handleImg, withImgCookie } from './img.js';
 import { routes as itemRoutes } from './items.js';
+import { routes as reviewRoutes } from './review.js';
 import { fetchPageInfo } from './page.js';
 
 // The routing table. A route is [method, path, handler]; `:name` in the path
@@ -16,6 +17,7 @@ import { fetchPageInfo } from './page.js';
 // here (Phase 4: ...readerRoutes).
 const ROUTES = [
   ...itemRoutes,
+  ...reviewRoutes,
 ].map(([method, path, handler]) => ({ method, path, handler, match: compilePath(path) }));
 
 export default {

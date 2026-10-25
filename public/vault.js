@@ -53,6 +53,9 @@ export function createVaultPanel() {
   };
   const views = { list: viewLink('list', S.viewList), shelf: viewLink('shelf', S.viewShelf) };
   const toggle = el('div', { className: 'view-toggle', role: 'group', 'aria-label': S.viewLabel }, views.list, views.shelf);
+  let editingId = null; // Vault row whose takeaway is being rewritten (Phase 6)
+  let draft = '';       // its text, kept across re-renders
+  let rendering = false;
   const element = el(
     'section',
     { className: 'panel' },
@@ -77,7 +80,14 @@ export function createVaultPanel() {
     shelf.render([], null);
     if (!vault.length) return list.replaceChildren(el('li', { className: 'calm' }, S.vaultEmpty));
     if (!items.length) return list.replaceChildren(el('li', { className: 'calm' }, S.vaultNoMatch));
+    rendering = true;
     list.replaceChildren(...items.map(row));
+    rendering = false;
+    const field = list.querySelector('.takeaway-edit');
+    if (field && document.activeElement !== field) {
+      field.focus();
+      field.setSelectionRange(draft.length, draft.length);
+    }
   }
 
   // The takeaway is what was earned, so it leads; the title follows, small.
@@ -85,10 +95,43 @@ export function createVaultPanel() {
     return el(
       'li',
       { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}`, dataset: { id: String(item.id) } },
-      item.takeaway ? el('blockquote', { className: 'takeaway-text' }, item.takeaway) : null,
+      editingId === item.id ? takeawayField(item) : item.takeaway ? takeawayQuote(item) : null,
       el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.title),
       el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`)
     );
+  }
+
+  // Click the takeaway (or press e on the row) to rewrite it: Enter saves, Esc cancels.
+  function takeawayQuote(item) {
+    const quote = el('blockquote', { className: 'takeaway-text editable', title: S.takeawayEdit }, item.takeaway);
+    quote.addEventListener('click', () => editTakeaway(item.id));
+    return quote;
+  }
+
+  function takeawayField(item) {
+    const field = el('input', { type: 'text', className: 'takeaway-edit', maxLength: 500, value: draft, 'aria-label': S.takeawayEdit, enterKeyHint: 'done' });
+    const finish = (save) => {
+      if (editingId !== item.id) return;
+      editingId = null;
+      if (save && draft.trim() !== (item.takeaway || '')) store.editTakeaway(item.id, draft.trim());
+      else render(store.getState());
+    };
+    field.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
+    });
+    field.addEventListener('input', () => (draft = field.value));
+    field.addEventListener('blur', () => rendering || finish(false));
+    return field;
+  }
+
+  function editTakeaway(id) {
+    const item = store.getState().data.vault.find((i) => i.id === id);
+    if (!item) return;
+    editingId = id;
+    draft = item.takeaway || '';
+    render(store.getState());
+    list.querySelector('.takeaway-edit')?.select();
   }
 
   function setQuery(q) {
@@ -99,5 +142,5 @@ export function createVaultPanel() {
   // Arrow keys on the shelf (keys.js asks first); false lets j/k handling run.
   const arrow = (key) => view === 'shelf' && !shelf.element.hidden && shelf.arrow(key);
 
-  return { element, render, focusSearch: () => search.focus(), setQuery, arrow };
+  return { element, render, focusSearch: () => search.focus(), setQuery, arrow, editTakeaway };
 }
