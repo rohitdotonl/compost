@@ -1,0 +1,30 @@
+// The Heap tab: what was tossed, dropped or expired. No restore, on purpose.
+import { S } from './strings.js';
+import { el } from './api.js';
+import { shortDate } from './format.js';
+
+export function createHeapPanel() {
+  const list = el('ul', { className: 'list' });
+  const element = el('section', { className: 'panel' }, el('p', { className: 'note' }, S.heapNote), list);
+
+  function render(state) {
+    const heap = state.data.heap;
+    if (!heap.length) {
+      list.replaceChildren(el('li', { className: 'calm' }, S.heapEmpty));
+      return;
+    }
+    list.replaceChildren(
+      ...heap.map((item) =>
+        el(
+          'li',
+          { className: 'item' },
+          el('p', { className: 'title' }, item.title),
+          el('a', { className: 'url', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.url),
+          el('p', { className: 'meta' }, S.leftOn(shortDate(item.ended_at)))
+        )
+      )
+    );
+  }
+
+  return { element, render };
+}

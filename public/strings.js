@@ -35,6 +35,9 @@ export const S = {
 
   // Toss
   tossed: 'Good call. Attention saved.',
+  undo: 'Undo',
+  restored: 'Back in your rack.',
+  undoExpired: 'Too late to undo.',
 
   // Vault
   vaultSearch: 'Search your vault',
@@ -74,6 +77,7 @@ export const S = {
 
   // Errors
   offline: 'Couldn’t reach Compost. Try again.',
+  actionFailed: 'Couldn’t reach Compost. Nothing changed.',
   retry: 'Try again',
   somethingWrong: 'Something went wrong.',
 };
