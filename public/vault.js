@@ -5,6 +5,13 @@ import * as store from './store.js';
 import { shortDate } from './format.js';
 import { matches, parseQuery } from './search.js';
 import { exportJson, exportMarkdown, exportObsidian } from './export.js';
+import { createShelf } from './shelf.js';
+
+const VIEW_KEY = 'compost.vaultView'; // 'list' or 'shelf', per device
+
+function savedView() {
+  try { return localStorage.getItem(VIEW_KEY) === 'shelf' ? 'shelf' : 'list'; } catch { return 'list'; }
+}
 
 export function createVaultPanel() {
   let query = '';
@@ -32,26 +39,44 @@ export function createVaultPanel() {
     exportLink(S.exportObsidian, exportObsidian)
   );
   const list = el('ul', { className: 'list' });
+  // Phase 7: List / Shelf
+  let view = savedView();
+  const shelf = createShelf();
+  const viewLink = (name, label) => {
+    const b = el('button', { type: 'button', className: 'link' }, label);
+    b.addEventListener('click', () => {
+      view = name;
+      try { localStorage.setItem(VIEW_KEY, name); } catch {}
+      render(store.getState());
+    });
+    return b;
+  };
+  const views = { list: viewLink('list', S.viewList), shelf: viewLink('shelf', S.viewShelf) };
+  const toggle = el('div', { className: 'view-toggle', role: 'group', 'aria-label': S.viewLabel }, views.list, views.shelf);
   const element = el(
     'section',
     { className: 'panel' },
-    el('div', { className: 'row' }, search),
+    el('div', { className: 'row' }, search, toggle),
     list,
+    shelf.element,
     el('p', { className: 'footer' }, download)
   );
 
   function render(state) {
+    for (const [name, b] of Object.entries(views)) b.setAttribute('aria-pressed', String(name === view));
     const vault = state.data.vault;
-    if (!vault.length) {
-      list.replaceChildren(el('li', { className: 'calm' }, S.vaultEmpty));
+    const items = vault.filter((i) => matches(i, parseQuery(query)));
+    const onShelf = view === 'shelf' && items.length > 0;
+    shelf.element.hidden = !onShelf;
+    if (onShelf) {
+      // Only the spines carry data-id while the shelf shows, for keys.js.
+      list.replaceChildren();
+      shelf.render(items, state.selectedId);
       return;
     }
-    const parsed = parseQuery(query);
-    const items = vault.filter((i) => matches(i, parsed));
-    if (!items.length) {
-      list.replaceChildren(el('li', { className: 'calm' }, S.vaultNoMatch));
-      return;
-    }
+    shelf.render([], null);
+    if (!vault.length) return list.replaceChildren(el('li', { className: 'calm' }, S.vaultEmpty));
+    if (!items.length) return list.replaceChildren(el('li', { className: 'calm' }, S.vaultNoMatch));
     list.replaceChildren(...items.map(row));
   }
 
@@ -70,5 +95,8 @@ export function createVaultPanel() {
     if (store.getState().data) render(store.getState());
   }
 
-  return { element, render, focusSearch: () => search.focus(), setQuery };
+  // Arrow keys on the shelf (keys.js asks first); false lets j/k handling run.
+  const arrow = (key) => view === 'shelf' && !shelf.element.hidden && shelf.arrow(key);
+
+  return { element, render, focusSearch: () => search.focus(), setQuery, arrow };
 }

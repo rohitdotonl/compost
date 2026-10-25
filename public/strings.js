@@ -128,4 +128,11 @@ export const S = {
     ['Esc', 'Back out'],
     ['?', 'This sheet'],
   ],
+
+  // Phase 7: shelf
+  viewLabel: 'Vault view',
+  viewList: 'List',
+  viewShelf: 'Shelf',
+  shelfLabel: 'Bookshelf, one shelf per month',
+  spineLabel: (title, site, date) => `${title} — ${site} — finished ${date}`,
 };

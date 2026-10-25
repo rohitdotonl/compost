@@ -43,6 +43,7 @@ purpose: change a constant, redeploy.
 | `public/format.js` | Dates and the expiry fade |
 | `public/keys.js` | Keyboard shortcuts, paste-to-save and the `#vault?q=…` / `#item/42` links |
 | `public/palette.js`, `palette.css` | The ⌘K command palette and the shortcut sheet |
+| `public/shelf.js`, `shelf.css` | The Vault's Shelf view: one shelf per month, a spine per article (List / Shelf toggle beside the search, remembered per device) |
 | `public/search.js` | Vault search (`site:`, `intent:`, `before:`, `after:`) shared with the palette |
 | `public/export.js`, `zip.js` | Markdown, JSON and Obsidian zip exports, built in the browser |
 | `public/save.html`, `save.js` | Save page used by the share menu and the bookmarklet |
