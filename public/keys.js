@@ -82,6 +82,9 @@ function press(key, target) {
     chordAt = 0;
     if (fresh && CHORD_TABS[key]) return go(CHORD_TABS[key]), true;
   }
+  // A panel laid out in two dimensions (the Vault's shelf) takes the arrows.
+  const panel = panels()[app.currentTab()];
+  if (key.startsWith('Arrow') && panel.arrow && panel.arrow(key)) return true;
   const state = store.getState();
   const id = state.selectedId;
   const rackId = id != null && store.rackItem(id) ? id : null;
@@ -108,6 +111,7 @@ function press(key, target) {
     case 'u':
       return undo();
     case 'e':
+      if (rackId == null && id != null && store.locate(id)?.tab === 'vault') return panels().vault.editTakeaway(id), true;
       if (rackId == null) return false;
       if (store.rackItem(rackId).extended) store.setStatus(S.alreadyExtended);
       else store.extend(rackId);

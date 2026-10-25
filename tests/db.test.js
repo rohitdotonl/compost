@@ -5,17 +5,17 @@ import { MIGRATIONS } from '../src/migrations.js';
 import { openDatabase } from './d1.js';
 import { makeApp } from './helpers.js';
 
-const lastNumber = MIGRATIONS[MIGRATIONS.length - 1][0];
 
-async function version(db) {
-  const row = await db.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).first();
-  return row ? Number(row.value) : null;
+async function applied(db) {
+  const { results } = await db.prepare(`SELECT key FROM meta WHERE key LIKE 'migration:%'`).all();
+  return results.map((r) => Number(r.key.slice('migration:'.length))).sort((a, b) => a - b);
 }
+const allNumbers = MIGRATIONS.map(([n]) => n);
 
-test('migrations run on an empty database and record the last number', async () => {
+test('migrations run on an empty database and record each number', async () => {
   const db = openDatabase();
   await migrate(db);
-  assert.equal(await version(db), lastNumber);
+  assert.deepEqual(await applied(db), allNumbers);
   const tables = (await db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`).all()).results.map((r) => r.name);
   assert.ok(tables.includes('items'));
   assert.ok(tables.includes('meta'));
@@ -35,26 +35,33 @@ test('migrations are safe on a database that V1 created, and keep its rows', asy
     INSERT INTO items (url, title, site, saved_at, expires_at) VALUES ('https://old.test/', 'Old', 'old.test', 1, 2);
   `);
   await migrate(db);
-  assert.equal(await version(db), lastNumber);
+  assert.deepEqual(await applied(db), allNumbers);
   assert.equal((await db.prepare(`SELECT COUNT(*) AS n FROM items`).first()).n, 1);
 });
 
 test('migrations run once per database and skip ones already applied', async () => {
   const db = openDatabase();
-  db.exec(`CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES ('schema_version', '9999')`);
+  // Pretend every migration but the first already ran: only 0001 runs now.
+  db.exec(`CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)`);
+  for (const n of allNumbers.slice(1)) db.exec(`INSERT INTO meta VALUES ('migration:${n}', '1')`);
   await migrate(db);
   await migrate(db);
-  // Nothing above 9999 exists, so the items table was never created.
-  const row = await db.prepare(`SELECT name FROM sqlite_master WHERE name = 'items'`).first();
-  assert.equal(row, null);
-  assert.equal(await version(db), 9999);
+  assert.deepEqual(await applied(db), allNumbers);
+  assert.ok(await db.prepare(`SELECT name FROM sqlite_master WHERE name = 'items'`).first());
+});
+
+test('a lower-numbered migration that lands later still runs', async () => {
+  const db = openDatabase();
+  db.exec(`CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES ('migration:9999', '1')`);
+  await migrate(db);
+  assert.deepEqual(await applied(db), [...allNumbers, 9999].sort((a, b) => a - b));
 });
 
 test('every API call works on a fresh database (migrations happen on first use)', async () => {
   const app = makeApp();
   const { status } = await app.call('GET', '/api/items');
   assert.equal(status, 200);
-  assert.equal(await version(app.db), lastNumber);
+  assert.deepEqual(await applied(app.db), allNumbers);
 });
 
 test('splitStatements keeps a trigger body together and drops comments', () => {

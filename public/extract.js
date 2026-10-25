@@ -5,6 +5,7 @@
 //
 // The small helpers at the top are pure, so the tests run them under Node.
 import DOMPurify from './vendor/purify.es.mjs';
+import { imgSrc } from './format.js';
 
 export const WORDS_PER_MINUTE = 230; // the same as src/rules.js
 export const MIN_WORDS = 120;        // less than this is a paywall or a stub, not an article
@@ -34,8 +35,7 @@ export function proxiedImage(src, base) {
   if (!src) return null;
   if (/^data:image\//i.test(src)) return src;
   if (src.startsWith('/img?')) return src;
-  const url = absoluteUrl(src, base);
-  return url ? `/img?u=${encodeURIComponent(url)}` : null;
+  return imgSrc(absoluteUrl(src, base));
 }
 
 // The widest candidate up to about 1600px from a srcset, else the first.

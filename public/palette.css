@@ -87,10 +87,3 @@ kbd {
   border-radius: 4px;
 }
 .keysheet-close { text-align: right; margin: 12px 0 0; }
-
-/* A fallback mark for the selected row; style.css's own rule wins. */
-:where(.list > li[aria-selected="true"]) {
-  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  outline-offset: 4px;
-  border-radius: 4px;
-}

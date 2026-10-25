@@ -12,6 +12,11 @@ export const HEAP_KEEP = 30 * DAY;      // heap items are purged after this
 export const UNDO_WINDOW = 10 * 1000;   // a toss can be undone this long after it
 export const WORDS_PER_MINUTE = 230;    // for the reading-time estimate
 export const FETCH_TIMEOUT = 5000;      // ms to wait for a page's title
+// Phase 6: the daily line and spaced review.
+export const MIN_VAULT_FOR_DAILY = 20;              // takeaways needed before a daily line shows
+export const REVIEW_INTERVALS = [1, 7, 30, 90, 180]; // days; "Still useful" steps along, stays at the last
+export const REVIEW_MIN_AGE = 14 * DAY;              // with nothing due, only lines older than this
+export const REVIEW_RESHOW = 30 * DAY;               // ...and not shown within this
 export const INTENTS = ['tonight', 'commute', 'weekend'];
 
 // Query parameters that only track where a click came from.

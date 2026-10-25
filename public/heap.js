@@ -4,7 +4,7 @@ import { el } from './api.js';
 import { shortDate } from './format.js';
 
 export function createHeapPanel() {
-  const list = el('ul', { className: 'list' });
+  const list = el('ul', { className: 'list heap' });
   const element = el('section', { className: 'panel' }, el('p', { className: 'note' }, S.heapNote), list);
 
   function render(state) {

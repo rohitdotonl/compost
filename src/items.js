@@ -14,7 +14,11 @@ export const routes = [
   ['POST', '/api/items/:id/toss', toss],
   ['POST', '/api/items/:id/untoss', untoss],
   ['POST', '/api/items/:id/extend', extend],
+  ['POST', '/api/items/:id/note', setNote],
+  ['POST', '/api/items/:id/refresh', refresh],
 ];
+
+const NOTE_MAX = 200;
 
 async function listItems({ db, now }) {
   const [rack, vault, heap] = await db.batch([
@@ -49,17 +53,22 @@ function findSaved(db, url) {
     .first();
 }
 
-// POST /api/items  { url, dropId?, title? }
+// POST /api/items  { url, dropId?, title?, note? }
 // `title` is an optional hint (from the share sheet) used only when the page
-// itself can't be fetched.
+// itself can't be fetched. `note` is the saver's one-line "why"; sent again
+// for a URL already in the rack, it sets the note on that item (the Chrome
+// extension saves first and sends the note in a second call).
 async function saveItem({ db, now, request, fetchPage }) {
   const body = await readBody(request);
   const url = normaliseUrl(body.url);
   if (!url) return json({ status: 'invalid_url' }, 400);
+  const note = cleanNote(body.note);
 
   const existing = await findSaved(db, url);
   if (existing) {
-    return json({ status: existing.outcome === 'done' ? 'in_vault' : 'in_rack', id: existing.id });
+    if (existing.outcome === 'done') return json({ status: 'in_vault', id: existing.id });
+    if (note) await db.prepare(`UPDATE items SET note = ? WHERE id = ?`).bind(note, existing.id).run();
+    return json({ status: 'in_rack', id: existing.id });
   }
 
   let used = await rackCount(db);
@@ -84,10 +93,11 @@ async function saveItem({ db, now, request, fetchPage }) {
   // two saves race each other.
   statements.push(
     db.prepare(
-      `INSERT INTO items (url, title, site, minutes, saved_at, expires_at)
-       SELECT ?, ?, ?, ?, ?, ?
+      `INSERT INTO items (url, title, site, minutes, saved_at, expires_at,
+                          description, image_url, favicon_url, author, lang, note)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE (SELECT COUNT(*) FROM items WHERE outcome IS NULL) < ?`
-    ).bind(url, title, site, page.minutes, now, expiresAt, SLOT_LIMIT)
+    ).bind(url, title, site, page.minutes ?? null, now, expiresAt, ...details(page), note, SLOT_LIMIT)
   );
 
   let results;
@@ -177,6 +187,44 @@ async function extend({ db }, { id }) {
     .run();
   if (!res.meta.changes) return json({ error: 'cannot_extend' }, 409);
   return changed(db, id);
+}
+
+// POST /api/items/:id/note  { note }: an empty note clears it.
+async function setNote({ db, request }, { id }) {
+  const body = await readBody(request);
+  const res = await db
+    .prepare(`UPDATE items SET note = ? WHERE id = ? AND outcome IS NULL`)
+    .bind(cleanNote(body.note), id)
+    .run();
+  if (!res.meta.changes) return json({ error: 'not_in_rack' }, 404);
+  return changed(db, id);
+}
+
+// POST /api/items/:id/refresh: fetches the page again, for a row that came
+// in bare. What the fetch can't find keeps its old value.
+async function refresh({ db, fetchPage }, { id }) {
+  const row = await db.prepare(`SELECT url FROM items WHERE id = ? AND outcome IS NULL`).bind(id).first();
+  if (!row) return json({ error: 'not_in_rack' }, 404);
+  const page = await fetchPage(row.url);
+  await db
+    .prepare(
+      `UPDATE items SET title = COALESCE(?, title), minutes = COALESCE(?, minutes),
+         description = COALESCE(?, description), image_url = COALESCE(?, image_url),
+         favicon_url = COALESCE(?, favicon_url), author = COALESCE(?, author), lang = COALESCE(?, lang)
+       WHERE id = ? AND outcome IS NULL`
+    )
+    .bind(page.title || null, page.minutes ?? null, ...details(page), id)
+    .run();
+  return changed(db, id);
+}
+
+// The page details stored with an item, in column order.
+function details(page) {
+  return [page.description, page.image, page.favicon, page.author, page.lang].map((v) => v || null);
+}
+
+function cleanNote(value) {
+  return typeof value === 'string' ? cleanText(value).slice(0, NOTE_MAX) || null : null;
 }
 
 // The answer to every action: the item as it now is, plus the slot count.

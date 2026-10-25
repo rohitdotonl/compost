@@ -1,0 +1,180 @@
+/* The Vault as a bookshelf (Phase 7). Flat and calm: muted spines on a thin
+   shelf line. The only movement is a small lift on hover, with no transition,
+   and none at all with reduced motion. */
+:root {
+  --shelf-h: 160px;
+  --shelf-gap: 22px;
+  --spine-ink: #2d2b26;
+  --tint-0: #cdbd9f; /* sand */
+  --tint-1: #aebba3; /* sage */
+  --tint-2: #bfa9ab; /* rose clay */
+  --tint-3: #a4b4bf; /* slate */
+  --tint-4: #c9ab92; /* terracotta, washed */
+  --tint-5: #b9b594; /* olive */
+  --tint-6: #aeaac2; /* heather */
+  --tint-7: #c4b8a6; /* oat */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --spine-ink: #e8e4da;
+    --tint-0: #5f5545;
+    --tint-1: #4b5747;
+    --tint-2: #5a4b4e;
+    --tint-3: #46545e;
+    --tint-4: #604d40;
+    --tint-5: #555341;
+    --tint-6: #4e4b60;
+    --tint-7: #58514a;
+  }
+}
+
+@media (max-width: 600px) {
+  :root { --shelf-h: 120px; --shelf-gap: 18px; }
+}
+
+/* List / Shelf toggle beside the search */
+.view-toggle {
+  display: flex;
+  gap: 10px;
+  flex: none;
+  font-size: 0.9rem;
+}
+.view-toggle button.link {
+  color: var(--muted);
+  text-decoration: none;
+}
+.view-toggle button.link[aria-pressed="true"] { color: var(--fg); }
+.view-toggle button.link:hover { text-decoration: underline; }
+
+.bookshelf {
+  position: relative;
+  margin-top: 28px;
+}
+
+.shelves,
+.shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.shelf-month + .shelf-month { margin-top: 36px; }
+
+.shelf-label {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Each wrapped row is exactly --shelf-h tall, so one repeating gradient draws
+   a thin line under every row. */
+.shelf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--shelf-gap) 3px;
+  padding-bottom: 2px;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 var(--shelf-h),
+    var(--line) var(--shelf-h) calc(var(--shelf-h) + 2px),
+    transparent calc(var(--shelf-h) + 2px) calc(var(--shelf-h) + var(--shelf-gap))
+  );
+}
+.shelf > li {
+  display: flex;
+  align-items: flex-end;
+  height: var(--shelf-h);
+}
+
+.spine {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: var(--w, 24px);
+  height: calc(var(--shelf-h) * var(--hf, 1));
+  padding: 8px 0;
+  border: 0;
+  border-radius: 2px 2px 0 0;
+  background: var(--tint-0);
+  color: var(--spine-ink);
+  line-height: 1;
+  overflow: hidden;
+}
+.spine-title {
+  display: block;
+  max-height: 100%;
+  margin: 0 auto;
+  writing-mode: vertical-rl;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spine.tint-1 { background-color: var(--tint-1); }
+.spine.tint-2 { background-color: var(--tint-2); }
+.spine.tint-3 { background-color: var(--tint-3); }
+.spine.tint-4 { background-color: var(--tint-4); }
+.spine.tint-5 { background-color: var(--tint-5); }
+.spine.tint-6 { background-color: var(--tint-6); }
+.spine.tint-7 { background-color: var(--tint-7); }
+
+/* Wear: well-handled spines get a faint grain and a softened edge. */
+.spine.wear-1,
+.spine.wear-2,
+.spine.wear-3 {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / var(--grain)) 0 1px,
+    transparent 1px 5px
+  );
+  box-shadow: inset 2px 0 0 rgb(0 0 0 / var(--edge));
+}
+.spine.wear-1 { --grain: 0.05; --edge: 0.05; }
+.spine.wear-2 { --grain: 0.08; --edge: 0.08; filter: saturate(0.9); }
+.spine.wear-3 { --grain: 0.11; --edge: 0.12; filter: saturate(0.8); opacity: 0.92; }
+@media (prefers-color-scheme: dark) {
+  .spine.wear-1 { --grain: 0.025; }
+  .spine.wear-2 { --grain: 0.04; }
+  .spine.wear-3 { --grain: 0.055; }
+}
+
+.spine:hover,
+.spine:focus-visible,
+.spine[aria-selected="true"] { transform: translateY(-3px); }
+.spine[aria-selected="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spine:hover,
+  .spine:focus-visible,
+  .spine[aria-selected="true"] { transform: none; }
+}
+
+/* Popover */
+.spine-tip {
+  position: absolute;
+  z-index: 2;
+  width: min(280px, 100%);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--fg);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+.spine-tip p { margin: 0; }
+.spine-tip-title {
+  font-family: var(--font-serif, Georgia, serif);
+  overflow-wrap: anywhere;
+}
+.spine-tip .meta { margin-top: 2px; font-size: 0.8rem; }
+.spine-tip-takeaway {
+  margin-top: 8px !important;
+  color: var(--muted);
+}

@@ -18,7 +18,7 @@
 import { S } from './strings.js';
 import { api, el, getPasscode } from './api.js';
 import * as store from './store.js';
-import { timeLeft } from './format.js';
+import { imgSrc, timeLeft } from './format.js';
 
 const ROUTE = /^#read\/(\d+)$/;
 const PREFS_KEY = 'compost.reader';
@@ -397,7 +397,7 @@ function buildView() {
 
 function fillHead(item, content) {
   view.original.href = item.url;
-  const favicon = item.favicon_url ? proxied(item.favicon_url) : null;
+  const favicon = imgSrc(item.favicon_url);
   view.favicon.hidden = !favicon;
   if (favicon) view.favicon.src = favicon;
   else view.favicon.removeAttribute('src');
@@ -410,10 +410,6 @@ function fillHead(item, content) {
   if (minutes) parts.push(S.minutes(minutes));
   if (item.outcome == null) parts.push(timeLeft(item.expires_at, Date.now()));
   view.meta.textContent = parts.join(' · ');
-}
-
-function proxied(url) {
-  return url.startsWith('/') ? url : `/img?u=${encodeURIComponent(url)}`;
 }
 
 async function renderArticle(item, content) {

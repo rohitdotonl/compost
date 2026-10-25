@@ -2,6 +2,7 @@
 // and by the bookmarklet (/save?url=…).
 import { S } from './strings.js';
 import { api, askPasscode, el, getPasscode, Unauthorized } from './api.js';
+import { thumbnail, untilDay, urlPath } from './format.js';
 
 const root = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -58,7 +59,6 @@ async function save(dropId) {
 }
 
 function showReceipt({ item, used, limit }) {
-  const weekday = new Date(item.expires_at).toLocaleDateString(undefined, { weekday: 'long' });
   const chips = el('div', { className: 'chips', role: 'group', 'aria-label': S.intentQuestion });
   for (const [value, label] of Object.entries(S.intents)) {
     const chip = el('button', { type: 'button', 'aria-pressed': 'false' }, label);
@@ -74,7 +74,14 @@ function showReceipt({ item, used, limit }) {
     chips.append(chip);
   }
   show(
-    el('p', { className: 'receipt' }, S.savedReceipt(used, limit, weekday)),
+    el(
+      'div',
+      { className: 'receipt saved' },
+      thumbnail(item),
+      el('div', {},
+        el('p', { className: 'title' }, item.title === item.url ? urlPath(item.url) : item.title),
+        el('p', { className: 'meta' }, S.slotReceipt(used, limit, untilDay(item.expires_at))))
+    ),
     el('p', { className: 'meta' }, S.intentQuestion),
     chips,
     closeLink()

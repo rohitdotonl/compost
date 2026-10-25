@@ -6,9 +6,11 @@
 // src/rules.js. The routes live in one module per area, listed in ROUTES.
 import { migrate, sweep } from './db.js';
 import { json, safeEqual } from './http.js';
+import { handleImg, withImgCookie } from './img.js';
 import { routes as itemRoutes } from './items.js';
 import { fetchPageInfo, fetchRawPage } from './page.js';
 import { routes as readerRoutes } from './reader.js';
+import { routes as reviewRoutes } from './review.js';
 
 // The routing table. A route is [method, path, handler]; `:name` in the path
 // becomes params.name. Every route needs the passcode and runs after the
@@ -17,6 +19,7 @@ import { routes as readerRoutes } from './reader.js';
 const ROUTES = [
   ...itemRoutes,
   ...readerRoutes,
+  ...reviewRoutes,
 ].map(([method, path, handler]) => ({ method, path, handler, match: compilePath(path) }));
 
 export default {
@@ -27,12 +30,16 @@ export default {
 
 // The whole request pipeline. `now`, `fetchPage` and `fetchRaw` can be injected, which
 // is how the tests drive expiry without waiting a week.
-export async function handle(request, env, { now = Date.now(), fetchPage = fetchPageInfo, fetchRaw = fetchRawPage } = {}) {
+export async function handle(request, env, { now = Date.now(), fetchPage = fetchPageInfo, fetchRaw = fetchRawPage, img = {} } = {}) {
   const url = new URL(request.url);
+  // The image proxy isn't a file, so it reaches the Worker; it checks its
+  // own cookie rather than the header (see src/img.js).
+  if (url.pathname === '/img') return handleImg(request, env, img).catch(() => new Response('Not found', { status: 404 }));
   if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
 
   try {
-    return await handleApi(request, env, url, now, fetchPage, fetchRaw);
+    const res = await handleApi(request, env, url, now, fetchPage, fetchRaw);
+    return res.status < 400 ? await withImgCookie(res, request, env.PASSCODE) : res;
   } catch (err) {
     console.error(err);
     return json({ error: 'server_error' }, 500);

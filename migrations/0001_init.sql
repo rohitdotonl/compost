@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS items (
 CREATE UNIQUE INDEX IF NOT EXISTS items_rack_url ON items (url) WHERE outcome IS NULL;
 CREATE INDEX IF NOT EXISTS items_outcome ON items (outcome, ended_at);
 
--- Small key/value store: the applied migration number lives here as
--- 'schema_version'. Later phases may add their own keys.
+-- Small key/value store: each applied migration is recorded here as
+-- 'migration:N'. Later phases may add their own keys.
 CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT
