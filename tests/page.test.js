@@ -38,5 +38,36 @@ test('parsePage falls back to <title> and gives no estimate for short pages', ()
 });
 
 test('parsePage copes with pages that have neither', () => {
-  assert.deepEqual(parsePage('<p>hi</p>'), { title: null, minutes: null });
+  assert.deepEqual(parsePage('<p>hi</p>', 'https://example.com/x'), {
+    title: null, minutes: null, description: null, image: null,
+    favicon: 'https://example.com/favicon.ico', author: null, lang: null,
+  });
+  assert.equal(parsePage('<p>hi</p>').favicon, null, 'no page URL, no favicon guess');
+});
+
+test('parsePage reads og tags, resolving image and icon against the page', () => {
+  const page = parsePage(fixture('rich.html'), 'https://fieldnotes.example.org/2026/10/shelf');
+  assert.equal(page.title, 'The Quiet Shelf');
+  assert.equal(page.description, 'Why a small shelf of books & articles beats an endless queue.');
+  assert.equal(page.image, 'https://fieldnotes.example.org/images/shelf.jpg?w=1200&h=630');
+  assert.equal(page.favicon, 'https://fieldnotes.example.org/2026/10/favicon-32.png');
+  assert.equal(page.author, 'Mira Okafor', 'a profile URL is not a name; meta author is');
+  assert.equal(page.lang, 'en-GB');
+});
+
+test('parsePage falls back to twitter tags and the apple-touch-icon', () => {
+  const page = parsePage(fixture('twitter.html'), 'https://example.net/a/b');
+  assert.equal(page.title, 'Le titre');
+  assert.equal(page.description, 'Une description courte.');
+  assert.equal(page.image, 'https://images.example.net/card.png');
+  assert.equal(page.author, 'Jeanne Martin');
+  assert.equal(page.lang, 'fr');
+  assert.equal(page.favicon, 'https://example.net/favicon.ico');
+  const touch = parsePage('<head><link rel="apple-touch-icon-precomposed" href="/t.png"></head>', 'https://x.test/');
+  assert.equal(touch.favicon, 'https://x.test/t.png');
+});
+
+test('parsePage ignores non-http image links', () => {
+  const page = parsePage('<head><meta property="og:image" content="javascript:alert(1)"></head>', 'https://x.test/');
+  assert.equal(page.image, null);
 });

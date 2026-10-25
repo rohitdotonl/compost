@@ -35,12 +35,14 @@ purpose: change a constant, redeploy.
 | `src/items.js` | Rack, Vault and Heap routes: list, save, lookup and the actions |
 | `src/db.js` | Runs the migrations once per Worker instance, and the expiry sweep |
 | `src/migrations.js` | The list of migration files, in order |
-| `src/page.js` | URL normalising, fetching a page for its title and reading time |
+| `src/page.js` | URL normalising, fetching a page for its title, description, image, favicon, author, language and reading time |
+| `src/img.js` | The image proxy (`/img?u=…`) behind its cookie |
 | `src/http.js` | JSON responses, body reading, passcode comparison |
 | `public/index.html`, `app.js`, `style.css` | Main page shell: header, tabs, status line |
 | `public/store.js` | State, localStorage cache, optimistic actions, row selection |
 | `public/rack.js`, `vault.js`, `heap.js` | One module per tab |
-| `public/format.js` | Dates and the expiry fade |
+| `public/format.js` | Time left in words, the expiry fade, image addresses and the row thumbnail |
+| `public/fonts/` | Self-hosted Literata (titles, takeaways) and IBM Plex Sans (everything else), latin woff2, SIL OFL |
 | `public/save.html`, `save.js` | Save page used by the share menu and the bookmarklet |
 | `public/api.js` | The passcode and API helper both pages share |
 | `public/bookmarklet.html`, `bookmarklet.js` | Shows the bookmarklet with your address filled in |
@@ -205,19 +207,40 @@ deleted. That is how expiry works without a scheduled job.
 | Method and path | Does |
 | --- | --- |
 | `GET /api/items` | Returns `rack` (expiring soonest first), `vault` and `heap` |
-| `POST /api/items` | Saves `{url, dropId?}`. `409` with the rack list when full and no `dropId` |
+| `POST /api/items` | Saves `{url, dropId?, title?, note?}`. `409` with the rack list when full and no `dropId`. For a URL already in the rack, a `note` sets that item's note (answer stays `in_rack`) |
 | `GET /api/lookup?url=…` | `{status: 'in_rack' | 'in_vault' | 'new', id?}` for the browser extension |
 | `POST /api/items/:id/intent` | Sets `{intent}`: `tonight`, `commute`, `weekend` or `null` |
 | `POST /api/items/:id/done` | Moves to the Vault with `{takeaway?}` |
 | `POST /api/items/:id/toss` | Moves to the Heap |
 | `POST /api/items/:id/untoss` | Reverses a toss, only within 10 seconds of it and only while a slot is free (the Undo; not a Heap restore) |
 | `POST /api/items/:id/extend` | Adds 48 hours, once |
+| `POST /api/items/:id/note` | Sets `{note}` (up to 200 characters; empty clears it) on a rack item |
+| `POST /api/items/:id/refresh` | Fetches the page again for its details; what it can't find keeps its old value |
+| `GET /img?u=…` | The image proxy (see below). Not under `/api/` and needs no header |
 
 A save answers with `status`: `saved`, `in_rack`, `in_vault`, `full` or
 `invalid_url`. URLs are normalised before comparing (tracking parameters such as
 `utm_*` and `fbclid` and the `#fragment` are removed). Every action answers
 with `{ok, item, used, limit}`: the item as it now is and the slot count, so
 the app updates one row instead of refetching the list.
+
+## Rich rows and the image proxy
+
+On save the Worker reads the page's `og:` and `twitter:` tags for a
+description and preview image, `<link rel="icon">` (or `/favicon.ico`) for the
+favicon, `meta author` / `article:author` when it is a name, and
+`<html lang>`. Migration `0002` adds the columns `description`, `image_url`,
+`favicon_url`, `author`, `lang` and `note` to `items`. A row that came in bare
+has a **Refresh details** action.
+
+Images and favicons are never loaded from the article's site directly: rows
+point at `/img?u=<address>`, which fetches the image (http(s) only, `image/*`
+only, up to 2 MB, 5 s timeout) and keeps it in the Workers Cache for 7 days.
+Failures answer 404 and the row shows the site's initial on a tinted tile.
+Since an `<img>` can't send the passcode header, every successful API call
+sets an `HttpOnly`, `SameSite=Strict` cookie scoped to `/img` holding the
+SHA-256 of the passcode; `/img` needs it. Changing the passcode invalidates it
+on the next API call. Nothing to set up.
 
 ## Is it working?
 

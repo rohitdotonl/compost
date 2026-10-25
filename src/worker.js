@@ -6,6 +6,7 @@
 // src/rules.js. The routes live in one module per area, listed in ROUTES.
 import { migrate, sweep } from './db.js';
 import { json, safeEqual } from './http.js';
+import { handleImg, withImgCookie } from './img.js';
 import { routes as itemRoutes } from './items.js';
 import { fetchPageInfo } from './page.js';
 
@@ -25,12 +26,16 @@ export default {
 
 // The whole request pipeline. `now` and `fetchPage` can be injected, which
 // is how the tests drive expiry without waiting a week.
-export async function handle(request, env, { now = Date.now(), fetchPage = fetchPageInfo } = {}) {
+export async function handle(request, env, { now = Date.now(), fetchPage = fetchPageInfo, img = {} } = {}) {
   const url = new URL(request.url);
+  // The image proxy isn't a file, so it reaches the Worker; it checks its
+  // own cookie rather than the header (see src/img.js).
+  if (url.pathname === '/img') return handleImg(request, env, img).catch(() => new Response('Not found', { status: 404 }));
   if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
 
   try {
-    return await handleApi(request, env, url, now, fetchPage);
+    const res = await handleApi(request, env, url, now, fetchPage);
+    return res.status < 400 ? await withImgCookie(res, request, env.PASSCODE) : res;
   } catch (err) {
     console.error(err);
     return json({ error: 'server_error' }, 500);

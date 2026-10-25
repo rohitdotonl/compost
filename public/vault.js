@@ -32,9 +32,7 @@ export function createVaultPanel() {
       return;
     }
     const q = query.trim().toLowerCase();
-    const items = q
-      ? vault.filter((i) => [i.title, i.site, i.url, i.takeaway].some((f) => f && f.toLowerCase().includes(q)))
-      : vault;
+    const items = q ? vault.filter((item) => vaultMatches(item, q)) : vault;
     if (!items.length) {
       list.replaceChildren(el('li', { className: 'calm' }, S.vaultNoMatch));
       return;
@@ -42,17 +40,23 @@ export function createVaultPanel() {
     list.replaceChildren(...items.map(row));
   }
 
+  // The takeaway is what was earned, so it leads; the title follows, small.
   function row(item) {
     return el(
       'li',
-      { className: 'item' },
+      { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}` },
+      item.takeaway ? el('blockquote', { className: 'takeaway-text' }, item.takeaway) : null,
       el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.title),
-      el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`),
-      item.takeaway ? el('blockquote', {}, item.takeaway) : null
+      el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`)
     );
   }
 
   return { element, render, focusSearch: () => search.focus() };
+}
+
+// The search filter: one predicate, so a smarter search can replace it.
+export function vaultMatches(item, q) {
+  return [item.title, item.site, item.url, item.takeaway].some((f) => f && f.toLowerCase().includes(q));
 }
 
 function downloadVault(vault) {
