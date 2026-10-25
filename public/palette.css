@@ -1,0 +1,96 @@
+/* Command palette and shortcut sheet: a quiet centred sheet, no motion. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  padding: 12vh 16px 16px;
+  overflow-y: auto;
+}
+
+.palette, .keysheet {
+  max-width: 560px;
+  margin: 0 auto;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.12);
+  overflow: hidden;
+}
+
+.palette-input {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 16px 20px;
+  font-size: 1.05rem;
+  background: transparent;
+}
+.palette-input:focus-visible { outline: none; }
+
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0 10px;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+}
+
+.palette-section {
+  padding: 12px 20px 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.palette-option {
+  display: block;
+  padding: 8px 20px;
+  cursor: pointer;
+}
+.palette-option[aria-selected="true"] { background: var(--chip); }
+
+.palette-title, .palette-command {
+  display: block;
+  font-family: var(--serif, Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-sub {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-empty { padding: 16px 20px; color: var(--muted); }
+
+/* Shortcut sheet */
+.keysheet { padding: 20px 24px 12px; }
+.keysheet:focus { outline: none; }
+.keysheet h2 { font-size: 1rem; font-weight: 600; margin: 0 0 12px; }
+.keysheet-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 20px;
+  margin: 0;
+}
+.keysheet-list dt { white-space: nowrap; }
+.keysheet-list dd { margin: 0; color: var(--muted); }
+kbd {
+  font: 0.85rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.keysheet-close { text-align: right; margin: 12px 0 0; }
+
+/* A fallback mark for the selected row; style.css's own rule wins. */
+:where(.list > li[aria-selected="true"]) {
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}

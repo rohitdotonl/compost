@@ -43,6 +43,7 @@
   --font-serif: "Literata", Georgia, "Times New Roman", serif;
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --serif: var(--font-serif); /* the name palette.css reads */
 
   /* paper */
   --paper: #f6f3eb;
@@ -219,7 +220,9 @@ a.title:hover { text-decoration: underline; text-decoration-thickness: 1px; text
   overflow-wrap: anywhere;
 }
 
-/* Keyboard selection (Phase 2 sets aria-selected): a moss rule in the gutter. */
+/* Keyboard selection (keys.js sets aria-selected on Rack, Vault and Heap
+   rows): a moss rule in the gutter, no outline. */
+.list > .item[aria-selected="true"] { outline: none; }
 .item[aria-selected="true"]::before {
   content: "";
   position: absolute;

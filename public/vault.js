@@ -2,20 +2,35 @@
 import { S } from './strings.js';
 import { el } from './api.js';
 import * as store from './store.js';
-import { isoDate, shortDate } from './format.js';
+import { shortDate } from './format.js';
+import { matches, parseQuery } from './search.js';
+import { exportJson, exportMarkdown, exportObsidian } from './export.js';
 
 export function createVaultPanel() {
   let query = '';
   const search = el('input', { type: 'search', placeholder: S.vaultSearch, 'aria-label': S.vaultSearch });
   search.addEventListener('input', () => {
     query = search.value;
+    // Keeps the search linkable as #vault?q=…
+    history.replaceState(null, '', query.trim() ? `#vault?q=${encodeURIComponent(query.trim())}` : '#vault');
     render(store.getState());
   });
-  const download = el('a', { href: '#', className: 'quiet' }, S.vaultDownload);
-  download.addEventListener('click', (e) => {
-    e.preventDefault();
-    downloadVault(store.getState().data.vault);
-  });
+  const exportLink = (label, run) => {
+    const a = el('a', { href: '#', className: 'quiet' }, label);
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      run(store.getState().data);
+    });
+    return a;
+  };
+  const download = el(
+    'span',
+    { className: 'quiet' },
+    `${S.exportLabel} `,
+    exportLink(S.exportMarkdown, exportMarkdown), ' · ',
+    exportLink(S.exportJson, exportJson), ' · ',
+    exportLink(S.exportObsidian, exportObsidian)
+  );
   const list = el('ul', { className: 'list' });
   const element = el(
     'section',
@@ -31,8 +46,8 @@ export function createVaultPanel() {
       list.replaceChildren(el('li', { className: 'calm' }, S.vaultEmpty));
       return;
     }
-    const q = query.trim().toLowerCase();
-    const items = q ? vault.filter((item) => vaultMatches(item, q)) : vault;
+    const parsed = parseQuery(query);
+    const items = vault.filter((i) => matches(i, parsed));
     if (!items.length) {
       list.replaceChildren(el('li', { className: 'calm' }, S.vaultNoMatch));
       return;
@@ -44,32 +59,17 @@ export function createVaultPanel() {
   function row(item) {
     return el(
       'li',
-      { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}` },
+      { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}`, dataset: { id: String(item.id) } },
       item.takeaway ? el('blockquote', { className: 'takeaway-text' }, item.takeaway) : null,
       el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.title),
       el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`)
     );
   }
 
-  return { element, render, focusSearch: () => search.focus() };
-}
-
-// The search filter: one predicate, so a smarter search can replace it.
-export function vaultMatches(item, q) {
-  return [item.title, item.site, item.url, item.takeaway].some((f) => f && f.toLowerCase().includes(q));
-}
-
-function downloadVault(vault) {
-  const lines = [`# ${S.vaultFileTitle}`, '', S.vaultFileExported(isoDate(Date.now())), ''];
-  for (const item of vault) {
-    const title = item.title.replace(/([\\[\]])/g, '\\$1');
-    lines.push(`## [${title}](${item.url.replace(/\)/g, '%29')})`, '', `${item.site} · ${S.finishedOn(isoDate(item.ended_at))}`, '');
-    if (item.takeaway) lines.push(`> ${item.takeaway}`, '');
+  function setQuery(q) {
+    search.value = query = q;
+    if (store.getState().data) render(store.getState());
   }
-  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
-  const a = el('a', { href: URL.createObjectURL(blob), download: `compost-vault-${isoDate(Date.now())}.md` });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+
+  return { element, render, focusSearch: () => search.focus(), setQuery };
 }
