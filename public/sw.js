@@ -1,13 +1,16 @@
 // Minimal service worker: makes the app installable and lets the shell open
 // without a connection. The API is never cached, so data is always fresh.
 // Bump CACHE whenever a file is added to SHELL or the shell changes shape.
-const CACHE = 'compost-v4';
+const CACHE = 'compost-v5';
 const SHELL = [
   '/', '/save', '/style.css', '/strings.js', '/api.js', '/app.js', '/save.js',
   '/store.js', '/format.js', '/rack.js', '/vault.js', '/heap.js',
   '/keys.js', '/palette.js', '/palette.css', '/search.js', '/export.js', '/zip.js',
   '/daily.js', '/daily.css',
   '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png',
+  '/fonts/literata-latin-wght-normal.woff2', '/fonts/literata-latin-wght-italic.woff2',
+  '/fonts/ibm-plex-sans-latin-400-normal.woff2', '/fonts/ibm-plex-sans-latin-400-italic.woff2',
+  '/fonts/ibm-plex-sans-latin-500-normal.woff2',
 ];
 
 self.addEventListener('install', (event) => {

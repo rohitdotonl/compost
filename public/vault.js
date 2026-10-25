@@ -65,19 +65,20 @@ export function createVaultPanel() {
     }
   }
 
+  // The takeaway is what was earned, so it leads; the title follows, small.
   function row(item) {
     return el(
       'li',
-      { className: 'item', dataset: { id: String(item.id) } },
+      { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}`, dataset: { id: String(item.id) } },
+      editingId === item.id ? takeawayField(item) : item.takeaway ? takeawayQuote(item) : null,
       el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.title),
-      el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`),
-      editingId === item.id ? takeawayField(item) : item.takeaway ? takeawayQuote(item) : null
+      el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`)
     );
   }
 
   // Click the takeaway (or press e on the row) to rewrite it: Enter saves, Esc cancels.
   function takeawayQuote(item) {
-    const quote = el('blockquote', { className: 'editable', title: S.takeawayEdit }, item.takeaway);
+    const quote = el('blockquote', { className: 'takeaway-text editable', title: S.takeawayEdit }, item.takeaway);
     quote.addEventListener('click', () => editTakeaway(item.id));
     return quote;
   }

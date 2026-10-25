@@ -214,6 +214,23 @@ export function editTakeaway(id, takeaway) {
   );
 }
 
+// Fetches the page again for a row that came in bare. Waits for the server,
+// like a save; resolves to the updated item or null.
+export async function refreshDetails(id) {
+  try {
+    const { status, data } = await api(`/api/items/${id}/refresh`, {});
+    if (status >= 400 || !data.item) throw new Rejected(status, data);
+    place(data.item);
+    remember();
+    emit();
+    return data.item;
+  } catch (err) {
+    if (err instanceof Unauthorized) onUnauthorized();
+    else setStatus(S.actionFailed);
+    return null;
+  }
+}
+
 // Saving waits for the server (it fetches the title). Resolves to the
 // response data, or null when the request failed.
 export async function add(url) {
