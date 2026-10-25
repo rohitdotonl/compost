@@ -14,7 +14,7 @@ const STATUS_MS = 5000;
 
 const state = {
   data: null,        // { now, rules, rack, vault, heap } as GET /api/items returns it
-  selectedId: null,  // rack row the keyboard is on
+  selectedId: null,  // row the keyboard is on, in whichever tab is showing
   promptId: null,    // rack row showing the takeaway prompt
   status: null,      // { text, action: { label, run } | null }
 };
@@ -96,6 +96,16 @@ export function rackItem(id) {
   return state.data ? state.data.rack.find((i) => i.id === id) : null;
 }
 
+// Any item by id, with the tab it lives on: { item, tab } or null.
+export function locate(id) {
+  if (!state.data) return null;
+  for (const tab of ['rack', 'vault', 'heap']) {
+    const item = state.data[tab].find((i) => i.id === id);
+    if (item) return { item, tab };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Status line
 // ---------------------------------------------------------------------------
@@ -116,12 +126,12 @@ export function select(id) {
   emit();
 }
 
-export function moveSelection(delta) {
-  const rows = rackItems();
-  if (!rows.length) return;
-  const index = rows.findIndex((i) => i.id === state.selectedId);
-  const next = index < 0 ? (delta > 0 ? 0 : rows.length - 1) : Math.min(rows.length - 1, Math.max(0, index + delta));
-  select(rows[next].id);
+// `ids` is the order on screen; keys.js passes the visible tab's rows.
+export function moveSelection(delta, ids = rackItems().map((i) => i.id)) {
+  if (!ids.length) return;
+  const index = ids.indexOf(state.selectedId);
+  const next = index < 0 ? (delta > 0 ? 0 : ids.length - 1) : Math.min(ids.length - 1, Math.max(0, index + delta));
+  select(ids[next]);
 }
 
 export function beginDone(id) {
@@ -136,7 +146,7 @@ export function cancelDone() {
 
 export function open(id) {
   if (reader && reader(id)) return;
-  const item = rackItem(id);
+  const item = locate(id)?.item;
   if (item) window.open(item.url, '_blank', 'noopener');
 }
 

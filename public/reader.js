@@ -63,7 +63,6 @@ export function createReader() {
   applyPrefs();
   store.setReader(openFromApp);
   document.addEventListener('click', interceptRackTitle);
-  window.addEventListener('keydown', onKey, true);
   for (const type of ['mousemove', 'pointerdown', 'touchstart', 'wheel', 'keydown']) {
     window.addEventListener(type, onInput, { passive: true });
   }
@@ -99,14 +98,14 @@ function openFromApp(id) {
   return true;
 }
 
-// A plain click on a rack row's title opens the reader; the row's Open
-// button and modified clicks still go to the original.
+// A plain click on a Rack or Vault row's title opens the reader; the row's
+// Open button and modified clicks still go to the original.
 function interceptRackTitle(e) {
   if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   const link = e.target.closest('li.item[data-id] a.title');
   if (!link) return;
   const id = Number(link.closest('li.item').dataset.id);
-  if (!store.rackItem(id)) return;
+  if (!findItem(id)) return;
   e.preventDefault();
   store.open(id);
 }
@@ -567,27 +566,30 @@ function wakeChrome() {
   }, CHROME_IDLE);
 }
 
-// Esc goes back one level; Shift+O opens the original. Runs before other
-// key handlers while reading, and stops them for the keys it takes.
-function onKey(e) {
-  if (!current) return;
-  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
-  if (e.key === 'Escape') {
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    if (!view.controls.hidden) {
-      view.controls.hidden = true;
-      view.aa.setAttribute('aria-expanded', 'false');
-    } else if (view.end.querySelector('form')) {
-      renderEnd(current.item);
-    } else {
-      leave();
-    }
-  } else if (!typing && e.key === 'O' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    window.open(current.item.url, '_blank', 'noopener');
+// The reader's rung on keys.js's Esc ladder: settings, then the takeaway
+// prompt, then back to the rack. True when it did something.
+export function readerBackOut() {
+  if (!current) return false;
+  if (!view.controls.hidden) {
+    view.controls.hidden = true;
+    view.aa.setAttribute('aria-expanded', 'false');
+  } else if (view.end.querySelector('form')) {
+    renderEnd(current.item);
+  } else {
+    leave();
   }
+  return true;
+}
+
+// keys.js hands every other key here while reading (the rack's shortcuts
+// are off). Shift+O opens the original. True when it took the key.
+export function readerKey(key) {
+  if (!current) return false;
+  if (key === 'O') {
+    window.open(current.item.url, '_blank', 'noopener');
+    return true;
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------

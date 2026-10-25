@@ -117,5 +117,11 @@ export function createRackPanel() {
     }
   }
 
-  return { element, render, focusAdd: () => input.focus() };
+  // Paste anywhere (keys.js) saves through the same flow and receipt.
+  function addUrl(url) {
+    input.value = url;
+    addLink(input, button);
+  }
+
+  return { element, render, focusAdd: () => input.focus(), addUrl };
 }

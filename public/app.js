@@ -1,12 +1,13 @@
 // The main page's shell: passcode, header, tabs, status line and the router.
 // Each tab is its own module; the state and the actions live in store.js.
-// Phase 2 adds keys.js here, driving store.js from the keyboard.
+// keys.js drives store.js from the keyboard and handles #vault?q=… and #item/N.
 import { S } from './strings.js';
 import { askPasscode, el, getPasscode, Unauthorized } from './api.js';
 import * as store from './store.js';
 import { createRackPanel } from './rack.js';
 import { createVaultPanel } from './vault.js';
 import { createHeapPanel } from './heap.js';
+import { parseHash, startKeys } from './keys.js';
 import { createReader } from './reader.js';
 
 const TABS = ['rack', 'vault', 'heap'];
@@ -21,6 +22,7 @@ async function start() {
   store.setUnauthorizedHandler(relogin);
   store.subscribe(render);
   window.addEventListener('hashchange', () => render(store.getState()));
+  startKeys({ panels: () => ui && ui.panels, currentTab, render: () => render(store.getState()) });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && ui) refresh();
   });
@@ -74,7 +76,7 @@ function buildShell() {
 }
 
 export function currentTab() {
-  const tab = location.hash.slice(1);
+  const tab = parseHash(location.hash).tab;
   return TABS.includes(tab) ? tab : 'rack';
 }
 
