@@ -56,6 +56,7 @@ export function createRackPanel() {
       const next = shown.slice(index + 1).find(([other]) => ids.has(other));
       li.classList.add('leaving');
       li.setAttribute('aria-hidden', 'true');
+      li.setAttribute('aria-selected', 'false');
       li.inert = true;
       leaving.set(id, { node: li, beforeId: next ? next[0] : null });
       const anim = li.animate(

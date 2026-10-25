@@ -208,7 +208,8 @@ export function copy(text, done) {
 
 function rows(tab) {
   const panel = panels() && panels()[tab];
-  return panel ? [...panel.element.querySelectorAll('[data-id]')] : [];
+  // A row sliding out (rack.js) is a ghost: it no longer holds the selection.
+  return panel ? [...panel.element.querySelectorAll('[data-id]:not(.leaving)')] : [];
 }
 
 function visibleIds() {
