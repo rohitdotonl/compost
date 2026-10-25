@@ -41,6 +41,10 @@ purpose: change a constant, redeploy.
 | `public/store.js` | State, localStorage cache, optimistic actions, row selection |
 | `public/rack.js`, `vault.js`, `heap.js` | One module per tab |
 | `public/format.js` | Dates and the expiry fade |
+| `public/keys.js` | Keyboard shortcuts, paste-to-save and the `#vault?q=…` / `#item/42` links |
+| `public/palette.js`, `palette.css` | The ⌘K command palette and the shortcut sheet |
+| `public/search.js` | Vault search (`site:`, `intent:`, `before:`, `after:`) shared with the palette |
+| `public/export.js`, `zip.js` | Markdown, JSON and Obsidian zip exports, built in the browser |
 | `public/save.html`, `save.js` | Save page used by the share menu and the bookmarklet |
 | `public/api.js` | The passcode and API helper both pages share |
 | `public/bookmarklet.html`, `bookmarklet.js` | Shows the bookmarklet with your address filled in |
@@ -121,6 +125,27 @@ shows the link only as text, Compost still finds the first URL in it.
 
 The installed app and Chrome on Android share storage, so the passcode you
 entered in step 1 carries over.
+
+## Keyboard (desktop)
+
+Press `?` for the full list. `j`/`k` move between rows, `o` or Enter opens,
+`d` marks done (type the takeaway, Enter), `x` tosses (`u` undoes), `e` adds
+48 hours, `c` copies the link, `1` `2` `3` set tonight, commute or weekend,
+`a` jumps to Add link, `/` searches the current tab, `g` then `r` `v` `h`
+switches tab. Esc backs out one step. Shortcuts never fire while you type in a
+field.
+
+**⌘K** (Ctrl+K on Windows and Linux) opens the palette: type a few letters of
+a title, site or takeaway to jump to any item, or a command name such as
+"export markdown" or "toss oldest". Enter goes to the item; ⌘/Ctrl+Enter also
+opens it.
+
+Paste a link anywhere on the page (with no field focused) to save it.
+
+The Vault search understands `site:nytimes.com`, `intent:weekend`,
+`before:2026-09` and `after:2026-03` (whole months, both exclusive), plus
+plain words matched against titles and takeaways. Searches are linkable:
+`/#vault?q=site:nytimes.com`, and so is one article: `/#item/42`.
 
 ## Add the bookmarklet (desktop)
 
@@ -243,5 +268,7 @@ counterparts are not).
 ## Backups
 
 D1 keeps 7 days of point-in-time recovery on the free plan
-(`npx wrangler d1 time-travel --help`). The **Download vault** link in the
-Vault tab saves everything worth keeping as a Markdown file.
+(`npx wrangler d1 time-travel --help`). The **Export** links at the bottom of
+the Vault tab (or the palette) save the Vault as Markdown, everything as JSON,
+or the Vault as a zip of Obsidian notes, one per article with its URL, site,
+dates and intent in the frontmatter.

@@ -17,7 +17,7 @@ export function createHeapPanel() {
       ...heap.map((item) =>
         el(
           'li',
-          { className: 'item' },
+          { className: 'item', dataset: { id: String(item.id) } },
           el('p', { className: 'title' }, item.title),
           el('a', { className: 'url', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.url),
           el('p', { className: 'meta' }, S.leftOn(shortDate(item.ended_at)))
