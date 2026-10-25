@@ -1,7 +1,7 @@
 // Minimal service worker: makes the app installable and lets the shell open
 // without a connection. The API is never cached, so data is always fresh.
 // Bump CACHE whenever a file is added to SHELL or the shell changes shape.
-const CACHE = 'compost-v4';
+const CACHE = 'compost-v5';
 const SHELL = [
   '/', '/save', '/style.css', '/strings.js', '/api.js', '/app.js', '/save.js',
   '/store.js', '/format.js', '/rack.js', '/vault.js', '/heap.js',
