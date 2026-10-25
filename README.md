@@ -49,6 +49,7 @@ purpose: change a constant, redeploy.
 | `public/strings.js` | All user-facing copy |
 | `public/manifest.webmanifest`, `sw.js`, `icons/` | PWA install and the Android share target |
 | `tests/` | `node --test` suite with a D1-shaped adapter over `node:sqlite` |
+| `extension/` | The Chrome extension (see below); `extension/dev/` holds a mock API and a smoke test |
 
 ## Migrations
 
@@ -132,6 +133,34 @@ it asks for your passcode; after that it saves straight away.
 
 Until you set it up, you can paste links into the **Add link** field at the top
 of the Rack.
+
+## Extension (Chrome, Edge, Brave)
+
+The [`extension/`](extension/) folder is a Manifest V3 extension: plain files,
+no build. The toolbar button saves the current tab and shows the receipt;
+right-clicking a link or page saves it quietly; **Alt+Shift+S** does the same
+as the button; and the icon carries a small mark when the page is already in
+your rack (`•`) or Vault (`✓`). It works on pages where the bookmarklet is
+blocked by a content security policy.
+
+1. Get the folder onto your computer: clone this repository, or download it
+   as a zip and unpack it. Keep the folder; Chrome loads it from where it is.
+2. Open `chrome://extensions` (Edge: `edge://extensions`, Brave:
+   `brave://extensions`), turn on **Developer mode** (top right), click
+   **Load unpacked** and choose the `extension` folder.
+3. Click the Compost icon's **Details → Extension options** (or right-click the
+   icon and choose **Options**). Enter your Compost address and passcode and
+   click **Save**. Chrome asks for permission to reach that address: allow it.
+   The page says **Connected.** when it works.
+4. Pin the icon from the puzzle-piece menu so it stays on the toolbar.
+
+The address and passcode stay in the extension's own storage on that
+computer. To change the shortcut, open `chrome://extensions/shortcuts`.
+
+To try it without a deployed Worker: `node extension/dev/mock-server.js`
+starts a stand-in API at `http://localhost:8791` with passcode `test`, and
+`node extension/dev/smoke.js` loads the extension in headless Chromium and
+walks through every popup state.
 
 
 ## Run it locally
