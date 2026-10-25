@@ -553,6 +553,8 @@ export function takeawayChoices(item, field, { prefill = false } = {}) {
   };
   const pick = async (h, button) => {
     setField(h.quote);
+    // Back to the field, so Enter keeps it (a touch keyboard stays down).
+    if (!matchMedia('(pointer: coarse)').matches) field.focus();
     for (const b of box.querySelectorAll('.hl-choice')) b.setAttribute('aria-pressed', String(b === button));
     if (h.starred) return;
     const res = await send(`/api/highlights/${h.id}`, { starred: true });
