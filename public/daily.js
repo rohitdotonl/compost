@@ -96,3 +96,29 @@ function readCache() {
 function remember(data) {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
 }
+
+// Phase 8: the Sunday line beneath the daily line, "You read for 3 h 10 min
+// this week." Asked for on Sundays only; on any other day it isn't there.
+export function createWeekly() {
+  const element = el('p', { className: 'weekly', hidden: true });
+  let checked = null; // the day last asked about
+
+  async function load() {
+    const now = new Date();
+    const day = localDay(now);
+    if (checked === day) return;
+    checked = day;
+    element.hidden = true;
+    if (now.getDay() !== 0) return;
+    try {
+      const { status, data } = await api(`/api/weekly?day=${day}`);
+      if (status !== 200 || !data.show) return;
+      element.textContent = S.weeklyLine(S.weeklyTime(Math.max(1, Math.round(data.seconds / 60))));
+      element.hidden = false;
+    } catch {
+      checked = null; // optional; try again on the next visit
+    }
+  }
+
+  return { element, load };
+}

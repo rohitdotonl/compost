@@ -36,3 +36,11 @@
 /* Rewriting a takeaway in the Vault (vault.js). */
 blockquote.editable { cursor: text; }
 .takeaway-edit { margin: 0 0 8px; font-family: var(--font-serif, Georgia, serif); }
+
+/* Phase 8: the Sunday reading-time line, quieter than the daily line. */
+.weekly {
+  margin: 0 0 32px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.daily[hidden] + .weekly { margin-top: 16px; }

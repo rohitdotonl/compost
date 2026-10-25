@@ -8,6 +8,7 @@
 import { json, readBody } from './http.js';
 import { cleanText } from './page.js';
 import { WORDS_PER_MINUTE } from './rules.js';
+import { addSecondsStatement, readingDay } from './weekly.js';
 
 // D1 caps a row at 2MB, so the article and its text stay well under it.
 const MAX_HTML_BYTES = 1_200_000;
@@ -90,9 +91,9 @@ async function saveContent({ db, now, request }, { id }) {
   return json({ ok: true, status: 'ok', words, minutes });
 }
 
-// POST /api/items/:id/progress { progress, seconds? }
-// `seconds` (active reading time since the last call) is accepted and
-// ignored for now; Phase 8 records it per day.
+// POST /api/items/:id/progress { progress, seconds?, day? }
+// `seconds` is active reading time since the last call; it is added to the
+// reading time of `day` (the client's local date) by src/weekly.js.
 async function saveProgress({ db, now, request }, { id }) {
   const body = await readBody(request);
   const progress = Number(body.progress);
@@ -103,6 +104,8 @@ async function saveProgress({ db, now, request }, { id }) {
     .bind(value, now, id)
     .run();
   if (!res.meta.changes) return json({ error: 'not_found' }, 404);
+  const add = addSecondsStatement(db, readingDay(body.day, now), body.seconds);
+  if (add) await add.run();
   return json({ ok: true, progress: value, last_read_at: now });
 }
 

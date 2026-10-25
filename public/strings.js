@@ -189,4 +189,36 @@ export const S = {
   stampWord: 'Read',
   stampLabel: (date) => `Read, ${date}`,
   exportHighlights: 'Highlights',
+  // Phase 8: nudges
+  // The notification (built by the Worker for GET /api/digest, and by sw.js).
+  digest: (n, when) => {
+    const words = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+    const count = words[n - 1] || String(n);
+    const day = { today: 'today', tomorrow: 'tomorrow', soon: 'by tomorrow' }[when] || 'tomorrow';
+    return n === 1 ? `${count} article leaves your rack ${day}.` : `${count} articles leave your rack ${day}.`;
+  },
+  digestFallback: 'Something in your rack expires soon.',
+  // The footer line (notify.js).
+  reminderOff: 'Daily reminder: off',
+  reminderTurnOn: 'Turn on',
+  reminderAt: (time) => `Daily reminder at ${time}`,
+  reminderChange: 'Change',
+  reminderTurnOff: 'Turn off',
+  reminderPick: 'Remind me at',
+  reminderHourLabel: 'Reminder time',
+  reminderSave: 'Save',
+  reminderCancel: 'Cancel',
+  reminderHint: 'Only on days something is about to leave your rack.',
+  reminderBlocked: 'Notifications are blocked for this site.',
+  reminderFailed: 'Couldn’t turn on the reminder here.',
+  reminderLabel: 'Daily reminder',
+  hourLabel: (h) => `${h}:00`,
+  // The Sunday line at the top of the Rack (daily.js).
+  weeklyLine: (time) => `You read for ${time} this week.`,
+  weeklyTime: (minutes) => {
+    if (minutes < 60) return `${minutes} min`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+  },
 };

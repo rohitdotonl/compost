@@ -12,6 +12,8 @@ import { fetchPageInfo, fetchRawPage } from './page.js';
 import { routes as readerRoutes } from './reader.js';
 import { routes as reviewRoutes } from './review.js';
 import { routes as highlightRoutes } from './highlights.js';
+import { routes as pushRoutes, runScheduled } from './push.js';
+import { routes as weeklyRoutes } from './weekly.js';
 
 // The routing table. A route is [method, path, handler]; `:name` in the path
 // becomes params.name. Every route needs the passcode and runs after the
@@ -22,11 +24,17 @@ const ROUTES = [
   ...readerRoutes,
   ...reviewRoutes,
   ...highlightRoutes,
+  ...pushRoutes,
+  ...weeklyRoutes,
 ].map(([method, path, handler]) => ({ method, path, handler, match: compilePath(path) }));
 
 export default {
   fetch(request, env) {
     return handle(request, env);
+  },
+  // Phase 8: the hourly Cron Trigger (wrangler.toml) for the daily reminder.
+  scheduled(event, env, ctx) {
+    ctx.waitUntil(runScheduled(env, { now: event.scheduledTime }));
   },
 };
 

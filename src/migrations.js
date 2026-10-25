@@ -13,6 +13,7 @@ import m0002 from '../migrations/0002_rich_rows.sql';
 import m0004 from '../migrations/0004_reader.sql';
 import m0005 from '../migrations/0005_highlights.sql';
 import m0006 from '../migrations/0006_reviews.sql';
+import m0008 from '../migrations/0008_nudges.sql';
 
 export const MIGRATIONS = [
   [1, m0001],
@@ -20,4 +21,5 @@ export const MIGRATIONS = [
   [4, m0004],
   [5, m0005],
   [6, m0006],
+  [8, m0008],
 ];
