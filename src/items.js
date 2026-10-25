@@ -99,7 +99,9 @@ async function saveItem({ db, now, request, fetchPage }) {
     throw err;
   }
 
-  const inserted = results[results.length - 1].meta.changes === 1;
+  // D1 counts rows written by triggers too (the search index, Phase 4), so
+  // "at least one" rather than "exactly one".
+  const inserted = results[results.length - 1].meta.changes >= 1;
   if (!inserted) {
     // The drop target was invalid, or the rack filled up meanwhile.
     used = await rackCount(db);

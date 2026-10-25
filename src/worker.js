@@ -7,7 +7,8 @@
 import { migrate, sweep } from './db.js';
 import { json, safeEqual } from './http.js';
 import { routes as itemRoutes } from './items.js';
-import { fetchPageInfo } from './page.js';
+import { fetchPageInfo, fetchRawPage } from './page.js';
+import { routes as readerRoutes } from './reader.js';
 
 // The routing table. A route is [method, path, handler]; `:name` in the path
 // becomes params.name. Every route needs the passcode and runs after the
@@ -15,6 +16,7 @@ import { fetchPageInfo } from './page.js';
 // here (Phase 4: ...readerRoutes).
 const ROUTES = [
   ...itemRoutes,
+  ...readerRoutes,
 ].map(([method, path, handler]) => ({ method, path, handler, match: compilePath(path) }));
 
 export default {
@@ -23,21 +25,21 @@ export default {
   },
 };
 
-// The whole request pipeline. `now` and `fetchPage` can be injected, which
+// The whole request pipeline. `now`, `fetchPage` and `fetchRaw` can be injected, which
 // is how the tests drive expiry without waiting a week.
-export async function handle(request, env, { now = Date.now(), fetchPage = fetchPageInfo } = {}) {
+export async function handle(request, env, { now = Date.now(), fetchPage = fetchPageInfo, fetchRaw = fetchRawPage } = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
 
   try {
-    return await handleApi(request, env, url, now, fetchPage);
+    return await handleApi(request, env, url, now, fetchPage, fetchRaw);
   } catch (err) {
     console.error(err);
     return json({ error: 'server_error' }, 500);
   }
 }
 
-async function handleApi(request, env, url, now, fetchPage) {
+async function handleApi(request, env, url, now, fetchPage, fetchRaw) {
   if (!env.PASSCODE) return json({ error: 'passcode_not_set' }, 500);
   if (!safeEqual(request.headers.get('X-Passcode') || '', env.PASSCODE)) {
     return json({ error: 'unauthorized' }, 401);
@@ -51,7 +53,7 @@ async function handleApi(request, env, url, now, fetchPage) {
   const db = env.DB;
   await migrate(db);
   await sweep(db, now);
-  return route.handler({ request, env, url, db, now, fetchPage }, route.match(url.pathname));
+  return route.handler({ request, env, url, db, now, fetchPage, fetchRaw }, route.match(url.pathname));
 }
 
 // '/api/items/:id/done' → a function returning { id } or null. `:id` only

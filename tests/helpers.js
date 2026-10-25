@@ -12,10 +12,17 @@ const PAGES = {
   'https://example.com/b': { title: 'Article B', minutes: null },
 };
 
-export function makeApp({ pages = PAGES } = {}) {
+// `raw` maps a URL to the HTML the fake network answers GET /raw with
+// (a string, or { url, html } for a redirect). Anything else fails.
+export function makeApp({ pages = PAGES, raw = {} } = {}) {
   const db = openDatabase();
   const env = { PASSCODE, DB: db, ASSETS: { fetch: async () => new Response('asset') } };
   const fetchPage = async (url) => pages[url] || { title: null, minutes: null };
+  const fetchRaw = async (url) => {
+    const page = raw[url];
+    if (page == null) return { ok: false, reason: 'unreachable' };
+    return typeof page === 'string' ? { ok: true, url, html: page } : { ok: true, ...page };
+  };
 
   // call('POST', '/api/items', { url }, { now, passcode }) → { status, data }
   async function call(method, path, body, { now = T0, passcode = PASSCODE } = {}) {
@@ -26,7 +33,7 @@ export function makeApp({ pages = PAGES } = {}) {
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const res = await handle(request, env, { now, fetchPage });
+    const res = await handle(request, env, { now, fetchPage, fetchRaw });
     return { status: res.status, data: await res.json() };
   }
 

@@ -7,14 +7,17 @@ import * as store from './store.js';
 import { createRackPanel } from './rack.js';
 import { createVaultPanel } from './vault.js';
 import { createHeapPanel } from './heap.js';
+import { createReader } from './reader.js';
 
 const TABS = ['rack', 'vault', 'heap'];
 const root = document.getElementById('app');
 let ui = null; // persistent elements, built once per unlock
+let reader = null; // Phase 4: the reader at #read/42, built once
 
 async function start() {
   if (!getPasscode()) await askPasscode(root, S);
   buildShell();
+  reader = createReader();
   store.setUnauthorizedHandler(relogin);
   store.subscribe(render);
   window.addEventListener('hashchange', () => render(store.getState()));
@@ -76,6 +79,7 @@ export function currentTab() {
 }
 
 function render(state) {
+  if (reader) reader.render(state);
   if (!ui) return;
   renderStatus(state.status);
   if (!state.data) return;

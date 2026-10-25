@@ -90,3 +90,25 @@ export function decodeEntities(s) {
 export function cleanText(s) {
   return String(s).replace(/\s+/g, ' ').trim();
 }
+
+// Phase 4: the raw HTML for extraction in the browser, fetched the same way
+// as fetchPageInfo (same agent, timeout and size cap) but not parsed here.
+// Resolves to { ok: true, url, html } with the URL after redirects, or
+// { ok: false, reason }.
+export async function fetchRawPage(url) {
+  try {
+    const res = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Compost/1.0; personal read-later)',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+    });
+    if (!res.ok) return { ok: false, reason: `http_${res.status}` };
+    if (!/html/i.test(res.headers.get('content-type') || '')) return { ok: false, reason: 'not_html' };
+    return { ok: true, url: res.url || url, html: await readCapped(res, 3_000_000) };
+  } catch {
+    return { ok: false, reason: 'unreachable' };
+  }
+}

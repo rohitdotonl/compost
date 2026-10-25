@@ -135,8 +135,28 @@ export function cancelDone() {
 }
 
 export function open(id) {
+  if (reader && reader(id)) return;
   const item = rackItem(id);
   if (item) window.open(item.url, '_blank', 'noopener');
+}
+
+// Phase 4: reader.js registers here. It returns true when it took the open
+// (the reader, or the original after a failed extraction).
+let reader = null;
+export function setReader(fn) {
+  reader = fn;
+}
+
+// Phase 4: updates fields of a rack or Vault item from outside an action
+// (the reader's real reading time, progress). No request is sent.
+export function patchItem(id, fields) {
+  if (!state.data) return;
+  for (const key of ['rack', 'vault']) {
+    const item = state.data[key].find((i) => i.id === id);
+    if (item) Object.assign(item, fields);
+  }
+  remember();
+  emit();
 }
 
 // ---------------------------------------------------------------------------
