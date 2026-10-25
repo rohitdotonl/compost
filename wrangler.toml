@@ -14,7 +14,7 @@ binding = "ASSETS"
 binding = "DB"
 database_name = "compost"
 
-# Lets the Worker import schema.sql and create the table itself.
+# Lets the Worker import migrations/*.sql as text and apply them itself.
 [[rules]]
 type = "Text"
 globs = ["**/*.sql"]
