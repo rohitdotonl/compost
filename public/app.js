@@ -104,7 +104,8 @@ function buildShell() {
   const heap = el('section', { className: 'panel' }, el('p', { className: 'note' }, S.heapNote), heapList);
 
   const header = el('header', {}, el('h1', {}, S.appName), nav);
-  root.replaceChildren(header, status, rack, vault, heap);
+  const footer = el('p', { className: 'footer' }, el('a', { href: '/bookmarklet', className: 'quiet' }, S.bookmarkletLink));
+  root.replaceChildren(header, status, rack, vault, heap, footer);
   ui = { links, status, addInput, panels: { rack, vault, heap }, rackList, vaultList, heapList };
 }
 

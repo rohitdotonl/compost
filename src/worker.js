@@ -2,6 +2,8 @@
 // Static files in ./public are served by Workers Static Assets before this
 // code runs, so fetch() only sees requests that didn't match a file.
 
+import SCHEMA from '../schema.sql';
+
 // ---------------------------------------------------------------------------
 // The rules. These are the product: change them here, deliberately.
 // ---------------------------------------------------------------------------
@@ -48,6 +50,7 @@ async function handleApi(request, env, url) {
 
   const db = env.DB;
   const now = Date.now();
+  await ensureSchema(db);
   await sweep(db, now);
 
   const path = url.pathname;
@@ -72,6 +75,24 @@ async function handleApi(request, env, url) {
   }
 
   return json({ error: 'not_found' }, 404);
+}
+
+// Creates the table on first use, so setup needs no separate schema step.
+// Runs once per Worker instance; every statement is IF NOT EXISTS.
+let schemaReady = null;
+function ensureSchema(db) {
+  if (!schemaReady) {
+    const statements = SCHEMA.replace(/--.*$/gm, '')
+      .split(';')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => db.prepare(s));
+    schemaReady = db.batch(statements).catch((err) => {
+      schemaReady = null;
+      throw err;
+    });
+  }
+  return schemaReady;
 }
 
 // Expiry without a scheduled job: runs at the start of every API call.
