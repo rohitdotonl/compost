@@ -1,7 +1,7 @@
 // Minimal service worker: makes the app installable and lets the shell open
 // without a connection. The API is never cached, so data is always fresh.
 // Bump CACHE whenever a file is added to SHELL or the shell changes shape.
-const CACHE = 'compost-v7';
+const CACHE = 'compost-v8';
 const SHELL = [
   '/', '/save', '/style.css', '/strings.js', '/api.js', '/app.js', '/save.js',
   '/store.js', '/format.js', '/rack.js', '/vault.js', '/heap.js',
@@ -14,6 +14,8 @@ const SHELL = [
   '/fonts/ibm-plex-sans-latin-500-normal.woff2',
   // Phase 4: reader
   '/reader.js', '/reader.css', '/extract.js', '/vendor/Readability.js', '/vendor/purify.es.mjs',
+  // Phase 5: reading tools
+  '/highlights.js', '/highlights.css', '/finish.js', '/finish.css',
 ];
 
 // Phase 4: article images come through the same-origin /img proxy and are

@@ -20,10 +20,14 @@ export const routes = [
 
 const NOTE_MAX = 200;
 
+// Rack and Vault rows carry `highlights`, their highlight count (Phase 5).
+const HIGHLIGHTS = `(SELECT COUNT(*) FROM highlights h WHERE h.item_id = items.id) AS highlights`;
+
 async function listItems({ db, now }) {
   const [rack, vault, heap] = await db.batch([
-    db.prepare(`SELECT * FROM items WHERE outcome IS NULL ORDER BY expires_at ASC, id ASC`),
-    db.prepare(`SELECT * FROM items WHERE outcome = 'done' ORDER BY ended_at DESC, id DESC`),
+    db.prepare(`SELECT *, ${HIGHLIGHTS} FROM items WHERE outcome IS NULL ORDER BY expires_at ASC, id ASC`),
+    // 'kept': expired with a highlight, shown as "kept, unfinished" (Phase 5).
+    db.prepare(`SELECT *, ${HIGHLIGHTS} FROM items WHERE outcome IN ('done', 'kept') ORDER BY ended_at DESC, id DESC`),
     db.prepare(
       `SELECT id, url, title, site, outcome, ended_at FROM items
        WHERE outcome IN ('tossed', 'dropped', 'expired') ORDER BY ended_at DESC, id DESC`
@@ -39,14 +43,14 @@ async function lookup({ db, url }) {
   if (!target) return json({ status: 'invalid_url' }, 400);
   const row = await findSaved(db, target);
   if (!row) return json({ status: 'new' });
-  return json({ status: row.outcome === 'done' ? 'in_vault' : 'in_rack', id: row.id });
+  return json({ status: row.outcome == null ? 'in_rack' : 'in_vault', id: row.id });
 }
 
 // The rack copy wins over a vault copy when both exist.
 function findSaved(db, url) {
   return db
     .prepare(
-      `SELECT id, outcome FROM items WHERE url = ? AND (outcome IS NULL OR outcome = 'done')
+      `SELECT id, outcome FROM items WHERE url = ? AND (outcome IS NULL OR outcome IN ('done', 'kept'))
        ORDER BY outcome IS NULL DESC LIMIT 1`
     )
     .bind(url)
@@ -66,7 +70,7 @@ async function saveItem({ db, now, request, fetchPage }) {
 
   const existing = await findSaved(db, url);
   if (existing) {
-    if (existing.outcome === 'done') return json({ status: 'in_vault', id: existing.id });
+    if (existing.outcome != null) return json({ status: 'in_vault', id: existing.id });
     if (note) await db.prepare(`UPDATE items SET note = ? WHERE id = ?`).bind(note, existing.id).run();
     return json({ status: 'in_rack', id: existing.id });
   }

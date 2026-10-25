@@ -11,11 +11,13 @@
 import m0001 from '../migrations/0001_init.sql';
 import m0002 from '../migrations/0002_rich_rows.sql';
 import m0004 from '../migrations/0004_reader.sql';
+import m0005 from '../migrations/0005_highlights.sql';
 import m0006 from '../migrations/0006_reviews.sql';
 
 export const MIGRATIONS = [
   [1, m0001],
   [2, m0002],
   [4, m0004],
+  [5, m0005],
   [6, m0006],
 ];

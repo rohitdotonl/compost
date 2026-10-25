@@ -97,7 +97,7 @@ export function createVaultPanel() {
       { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}`, dataset: { id: String(item.id) } },
       editingId === item.id ? takeawayField(item) : item.takeaway ? takeawayQuote(item) : null,
       el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.title),
-      el('p', { className: 'meta' }, `${item.site} · ${S.finishedOn(shortDate(item.ended_at))}`)
+      el('p', { className: 'meta' }, `${item.site} · ${item.outcome === 'kept' ? S.keptUnfinished : S.finishedOn(shortDate(item.ended_at))}`)
     );
   }
 

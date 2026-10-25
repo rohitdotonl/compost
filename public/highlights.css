@@ -1,0 +1,148 @@
+/* Highlights: a soft pencil wash, a small floating button, a tiny popover,
+   and a quiet list in the right margin on wide screens. */
+.reader { --hl-wash: rgba(214, 190, 112, 0.34); --hl-wash-strong: rgba(196, 166, 76, 0.5); }
+:root[data-reader-theme="sepia"] .reader { --hl-wash: rgba(196, 160, 82, 0.3); --hl-wash-strong: rgba(176, 138, 58, 0.48); }
+:root[data-reader-theme="dark"] .reader { --hl-wash: rgba(214, 190, 112, 0.18); --hl-wash-strong: rgba(214, 190, 112, 0.32); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-reader-theme="light"]):not([data-reader-theme="sepia"]) .reader { --hl-wash: rgba(214, 190, 112, 0.18); --hl-wash-strong: rgba(214, 190, 112, 0.32); }
+}
+
+/* The wash sits low on the line, like a pencil laid flat, not a neon block. */
+.reader-body mark.hl {
+  color: inherit;
+  background: linear-gradient(to bottom, transparent 18%, var(--hl-wash) 18%, var(--hl-wash) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: pointer;
+}
+.reader-body mark.hl:hover { background-color: transparent; --hl-wash: var(--hl-wash-strong); }
+
+/* The floating button and the popover live on <body>, placed in page coordinates. */
+.hl-add, .hl-pop {
+  position: absolute;
+  z-index: 5;
+  font: 14px/1.4 var(--font-sans, system-ui, sans-serif);
+  color: var(--soil, #2b2721);
+  background: var(--paper-raised, #fffdf7);
+  border: 1px solid var(--soil-line, #e3ddcf);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.hl-add { padding: 6px 12px; cursor: pointer; }
+.hl-add[hidden] { display: none; }
+:root[data-reader-theme="dark"] :is(.hl-add, .hl-pop) { color: #e7e3d7; background: #23241f; border-color: #30312a; }
+:root[data-reader-theme="sepia"] :is(.hl-add, .hl-pop) { color: #3b3226; background: #faf4e6; border-color: #e0d3b8; }
+:root[data-reader-theme="light"] :is(.hl-add, .hl-pop) { color: #2b2721; background: #fffdf7; border-color: #e3ddcf; }
+
+.hl-pop { width: min(300px, calc(100vw - 16px)); padding: 6px; }
+.hl-pop-note { margin: 4px 6px 8px; font-style: italic; color: var(--soil-muted, #766f60); }
+.hl-pop-actions { display: flex; flex-wrap: wrap; gap: 2px; }
+.hl-pop button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.hl-pop button:hover, .hl-pop button:focus-visible { background: color-mix(in srgb, currentColor 8%, transparent); }
+.hl-pop input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 6px 8px;
+  outline: none;
+}
+
+/* The margin: wide screens only (highlights.js hides it when there is no room). */
+.reader-page { position: relative; }
+.hl-margin {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 40px);
+  width: 200px;
+  font: 13px/1.45 var(--r-sans);
+  transition: opacity 0.6s ease;
+}
+.hl-margin[hidden] { display: none; }
+.hl-margin-item {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: block;
+  text-align: left;
+  font: inherit;
+  color: var(--r-muted);
+  background: none;
+  border: 0;
+  border-left: 2px solid var(--hl-wash-strong);
+  padding: 0 0 0 10px;
+  cursor: pointer;
+}
+.hl-margin-item:hover { color: var(--r-fg); }
+.hl-margin-item.starred { border-left-color: var(--r-fg); }
+.hl-margin-quote {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hl-margin-note { display: block; margin-top: 2px; font-style: italic; color: var(--r-fg); }
+
+/* Focus mode: the margin fades with the bar and returns on hover. */
+.reader.focus .hl-margin { opacity: 0; }
+.reader.focus .hl-margin:hover, .reader.focus .hl-margin:focus-within { opacity: 1; }
+
+/* Takeaway from a highlight, under the Done prompt (rack and reader). */
+.hl-choices { margin-top: 10px; }
+.hl-choices[hidden] { display: none; }
+.hl-choices-label { margin: 0 0 6px; font-size: 0.85em; color: var(--muted, var(--r-muted)); }
+.reader-end .hl-choice, .hl-choice {
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 4px 0 4px 10px;
+  text-align: left;
+  font: inherit;
+  font-size: 0.9em;
+  color: var(--muted, var(--r-muted));
+  background: none;
+  border: 0;
+  border-left: 2px solid var(--line, var(--r-line));
+  border-radius: 0;
+  cursor: pointer;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.hl-choice:hover { color: var(--fg, var(--r-fg)); }
+.hl-choice[aria-pressed="true"] { color: var(--fg, var(--r-fg)); border-left-color: var(--accent, var(--r-link)); }
+.reader .hl-choice { color: var(--r-muted); border-left-color: var(--r-line); }
+.reader .hl-choice:hover, .reader .hl-choice[aria-pressed="true"] { color: var(--r-fg); }
+.reader .hl-choice[aria-pressed="true"] { border-left-color: var(--r-link); }
+
+.hl-status {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 6px 12px;
+  font: 14px/1.4 var(--font-sans, system-ui, sans-serif);
+  color: var(--paper, #f6f3eb);
+  background: var(--soil, #2b2721);
+  border-radius: 6px;
+}
+.hl-status[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-margin { transition: none; }
+}

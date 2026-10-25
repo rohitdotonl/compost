@@ -12,6 +12,9 @@
 //   'compost:progress'       detail { id, progress, activeSeconds }   on scroll
 //   'compost:article-closed' detail { id, progress, activeSeconds }
 //   currentArticle()         the same fields for the open article, or null
+//   openTakeaway()           shows the Done prompt (finish.js, at the end moment)
+// While reading, `.reader.focus` marks focus mode: the bar has faded and
+// everything but the text and the page stack fades with it (Phase 5).
 // activeSeconds counts reading time: it pauses while the tab is hidden or
 // after 60s without input, and goes to the server with each progress save
 // as `seconds` (Phase 8 records it; the Worker ignores it until then).
@@ -19,6 +22,7 @@ import { S } from './strings.js';
 import { api, el, getPasscode } from './api.js';
 import * as store from './store.js';
 import { imgSrc, timeLeft } from './format.js';
+import { highlightBackOut, highlightKey, takeawayChoices } from './highlights.js';
 
 const ROUTE = /^#read\/(\d+)$/;
 const PREFS_KEY = 'compost.reader';
@@ -456,11 +460,19 @@ function renderEnd(item) {
   view.end.replaceChildren(el('div', { className: 'actions' }, doneBtn, tossBtn));
 }
 
-function askTakeaway(item) {
+// `slide`: the prompt slides up (the end moment, finish.js). `focus: false`
+// leaves the field alone, so a touch screen's keyboard stays down.
+function askTakeaway(item, { slide = false, focus = true } = {}) {
   const field = el('input', { type: 'text', maxLength: 500, 'aria-label': S.takeawayPrompt, enterKeyHint: 'done' });
   const keep = el('button', { type: 'submit' }, S.keep);
   const skip = el('button', { type: 'button' }, S.skip);
-  const form = el('form', { className: 'takeaway' }, el('label', {}, S.takeawayPrompt), el('div', { className: 'row' }, field, keep, skip));
+  const form = el(
+    'form',
+    { className: `takeaway${slide ? ' slide-in' : ''}` },
+    el('label', {}, S.takeawayPrompt),
+    el('div', { className: 'row' }, field, keep, skip),
+    takeawayChoices(item, field, { prefill: true })
+  );
   const finish = (takeaway) => {
     saveProgress(true);
     store.done(item.id, takeaway);
@@ -469,7 +481,14 @@ function askTakeaway(item) {
   form.addEventListener('submit', (e) => { e.preventDefault(); finish(field.value.trim()); });
   skip.addEventListener('click', () => finish(''));
   view.end.replaceChildren(form);
-  field.focus();
+  if (focus) field.focus({ preventScroll: slide });
+}
+
+// Phase 5: the end moment asks for the takeaway. False when not a rack article.
+export function openTakeaway(options) {
+  if (!current || current.item.outcome != null || !current.root) return false;
+  askTakeaway(current.item, options);
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -514,10 +533,17 @@ function onScroll() {
   });
 }
 
+// Keys that scroll the page; like the wheel, they keep focus mode on.
+const SCROLL_KEYS = new Set([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End']);
+
 function onInput(e) {
   lastInput = Date.now();
   if (!current) return;
-  if (e.type !== 'wheel') wakeChrome();
+  // Scrolling (wheel, touch, scroll keys) keeps focus mode; a mouse move, a
+  // tap (which also sends mouse events) or another key brings the bar back.
+  const scrolling = e.type === 'wheel' || e.type === 'touchstart' || (e.type === 'pointerdown' && e.pointerType !== 'mouse') ||
+    (e.type === 'keydown' && SCROLL_KEYS.has(e.key));
+  if (!scrolling) wakeChrome();
   if (e.type === 'wheel'|| e.type === 'touchstart' || e.type === 'keydown' || e.type === 'pointerdown') current.userMoved = true;
 }
 
@@ -562,10 +588,12 @@ function articleDetail() {
 function wakeChrome() {
   if (!view) return;
   view.bar.classList.remove('faded');
+  view.element.classList.remove('focus');
   clearTimeout(chromeTimer);
   chromeTimer = setTimeout(() => {
     if (!current || !view.controls.hidden || view.bar.contains(document.activeElement)) return;
     view.bar.classList.add('faded');
+    view.element.classList.add('focus');
   }, CHROME_IDLE);
 }
 
@@ -573,6 +601,7 @@ function wakeChrome() {
 // prompt, then back to the rack. True when it did something.
 export function readerBackOut() {
   if (!current) return false;
+  if (highlightBackOut()) return true; // Phase 5: a highlight's popover
   if (!view.controls.hidden) {
     view.controls.hidden = true;
     view.aa.setAttribute('aria-expanded', 'false');
@@ -585,11 +614,19 @@ export function readerBackOut() {
 }
 
 // keys.js hands every other key here while reading (the rack's shortcuts
-// are off). Shift+O opens the original. True when it took the key.
+// are off). Shift+O opens the original; h, n and s belong to the highlights
+// (Phase 5); Enter accepts an open takeaway prompt. True when it took the key.
 export function readerKey(key) {
   if (!current) return false;
   if (key === 'O') {
     window.open(current.item.url, '_blank', 'noopener');
+    return true;
+  }
+  if (highlightKey(key)) return true;
+  const form = view.end.querySelector('form.takeaway');
+  const onControl = document.activeElement && document.activeElement.closest && document.activeElement.closest('button, a');
+  if (key === 'Enter' && form && !onControl) {
+    form.requestSubmit();
     return true;
   }
   return false;

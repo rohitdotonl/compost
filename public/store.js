@@ -308,11 +308,14 @@ class Rejected extends Error {
 // keeping each list in the server's order.
 function place(item) {
   const d = state.data;
+  // Action answers carry no highlight count (Phase 5); keep the one we had.
+  const old = item.highlights == null && locate(item.id);
+  if (old && old.item.highlights != null) item = { ...item, highlights: old.item.highlights };
   for (const key of ['rack', 'vault', 'heap']) d[key] = d[key].filter((i) => i.id !== item.id);
   if (item.outcome == null) {
     d.rack.push(item);
     d.rack.sort((a, b) => a.expires_at - b.expires_at || a.id - b.id);
-  } else if (item.outcome === 'done') {
+  } else if (item.outcome === 'done' || item.outcome === 'kept') { // 'kept': expired with a highlight
     d.vault.unshift(item);
     d.vault.sort((a, b) => b.ended_at - a.ended_at || b.id - a.id);
   } else {

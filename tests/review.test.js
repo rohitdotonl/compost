@@ -135,14 +135,12 @@ test('the daily line follows an edited takeaway', async () => {
   assert.equal((await daily(app)).data.review.text, 'Rewritten');
 });
 
-test('a starred highlight is shown as its quote once Phase 5 has a highlights table', async () => {
+test('a starred highlight is shown as its quote (Phase 5 highlights table)', async () => {
   const app = makeApp();
   await ready(app);
-  app.db.exec(`CREATE TABLE highlights (id INTEGER PRIMARY KEY, item_id INTEGER NOT NULL, quote TEXT NOT NULL,
-    note TEXT, starred INTEGER NOT NULL DEFAULT 0, created_at INTEGER)`);
   seedVault(app, 20);
   // A highlight on a non-Vault item would not count; this one is on the oldest Vault item.
-  app.db.exec(`INSERT INTO highlights (item_id, quote, starred) VALUES (1, 'A starred quote', 1)`);
+  app.db.exec(`INSERT INTO highlights (item_id, quote, starred, created_at) VALUES (1, 'A starred quote', 1, ${T0})`);
   await daily(app);
   app.db.exec(`UPDATE reviews SET due_at = CASE WHEN highlight_id IS NULL THEN ${T0} ELSE 1 END`);
   const r = (await daily(app, '2026-10-06', T0 + DAY)).data.review;

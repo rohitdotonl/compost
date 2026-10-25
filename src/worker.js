@@ -11,6 +11,7 @@ import { routes as itemRoutes } from './items.js';
 import { fetchPageInfo, fetchRawPage } from './page.js';
 import { routes as readerRoutes } from './reader.js';
 import { routes as reviewRoutes } from './review.js';
+import { routes as highlightRoutes } from './highlights.js';
 
 // The routing table. A route is [method, path, handler]; `:name` in the path
 // becomes params.name. Every route needs the passcode and runs after the
@@ -20,6 +21,7 @@ const ROUTES = [
   ...itemRoutes,
   ...readerRoutes,
   ...reviewRoutes,
+  ...highlightRoutes,
 ].map(([method, path, handler]) => ({ method, path, handler, match: compilePath(path) }));
 
 export default {

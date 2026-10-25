@@ -1,6 +1,6 @@
 // Database upkeep: migrations on first use and the expiry sweep on every call.
 import { MIGRATIONS } from './migrations.js';
-import { HEAP_KEEP } from './rules.js';
+import { HEAP_KEEP, UNDO_WINDOW } from './rules.js';
 
 const META_TABLE = `CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`;
 const KEY_PREFIX = 'migration:';
@@ -55,9 +55,19 @@ export function splitStatements(sql) {
 
 // Expiry without a scheduled job: runs at the start of every API call.
 // Each step returns one prepared statement; the steps run as one batch, in
-// this order. Later phases add steps here (Phase 5: expired items that have a
-// highlight become 'kept' instead, so its step goes before expireRack).
-export const SWEEP_STEPS = [expireRack, purgeHeap];
+// this order.
+export const SWEEP_STEPS = [keepHighlighted, expireRack, purgeHeap, forgetTossedHighlights];
+
+// Phase 5: highlights earn the Vault. An expired article with at least one
+// highlight is 'kept' (shown as "kept, unfinished") instead of going to the Heap.
+function keepHighlighted(db, now) {
+  return db
+    .prepare(
+      `UPDATE items SET outcome = 'kept', ended_at = expires_at
+       WHERE outcome IS NULL AND expires_at <= ? AND EXISTS (SELECT 1 FROM highlights h WHERE h.item_id = items.id)`
+    )
+    .bind(now);
+}
 
 function expireRack(db, now) {
   return db
@@ -69,6 +79,16 @@ function purgeHeap(db, now) {
   return db
     .prepare(`DELETE FROM items WHERE outcome IN ('tossed', 'dropped', 'expired') AND ended_at < ?`)
     .bind(now - HEAP_KEEP);
+}
+
+// A tossed article keeps its highlights only as long as its Undo lasts.
+function forgetTossedHighlights(db, now) {
+  return db
+    .prepare(
+      `DELETE FROM highlights WHERE item_id IN
+         (SELECT id FROM items WHERE outcome = 'tossed' AND ended_at < ?)`
+    )
+    .bind(now - UNDO_WINDOW);
 }
 
 export function sweep(db, now) {

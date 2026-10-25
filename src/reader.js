@@ -24,7 +24,7 @@ export const routes = [
 ];
 
 // Rack and Vault items can be read; the Heap cannot.
-const READABLE = `(outcome IS NULL OR outcome = 'done')`;
+const READABLE = `(outcome IS NULL OR outcome IN ('done', 'kept'))`;
 
 function readableItem(db, id) {
   return db.prepare(`SELECT id, url, outcome FROM items WHERE id = ? AND ${READABLE}`).bind(id).first();
@@ -134,7 +134,7 @@ async function search({ db, url }) {
     .bind(match, SEARCH_LIMIT)
     .all();
   return json({
-    results: results.map((r) => ({ id: r.id, in: r.outcome === 'done' ? 'vault' : 'rack', snippet: markSnippet(r.snippet) })),
+    results: results.map((r) => ({ id: r.id, in: r.outcome == null ? 'rack' : 'vault', snippet: markSnippet(r.snippet) })),
   });
 }
 

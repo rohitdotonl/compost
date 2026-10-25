@@ -15,7 +15,7 @@ export const routes = [
   ['GET', '/api/items/:id/related', related],
 ];
 
-// Outcomes that live in the Vault ('kept' arrives with Phase 5).
+// Outcomes that live in the Vault ('kept': expired with a highlight, Phase 5).
 const VAULT = `('done', 'kept')`;
 const HAS_TAKEAWAY = `i.takeaway IS NOT NULL AND i.takeaway != ''`;
 
@@ -63,7 +63,7 @@ async function pick(db, now, highlights) {
       db.prepare(
         `INSERT OR IGNORE INTO reviews (item_id, highlight_id, due_at)
          SELECT i.id, h.id, COALESCE(i.ended_at, i.saved_at) + ? FROM highlights h JOIN items i ON i.id = h.item_id
-         WHERE h.starred = 1 AND i.outcome IN ${VAULT}`
+         WHERE h.starred = 1 AND i.outcome IN ${VAULT} AND h.quote != COALESCE(i.takeaway, '')`
       ).bind(DAY)
     );
   }

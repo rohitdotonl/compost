@@ -18,7 +18,7 @@ scheduled jobs. It fits comfortably in Cloudflare's free plan.
 | Done | Moves it to the Vault with an optional takeaway. Frees the slot. |
 | Toss | Moves it to the Heap. Frees the slot. |
 | Heap | Everything tossed, dropped or expired. Purged after 30 days. No restore. |
-| Vault | Done articles only. Permanent. |
+| Vault | Done articles, plus expired ones you highlighted ("kept, unfinished"). Permanent. |
 
 The rules are constants in [`src/rules.js`](src/rules.js). All the copy lives
 in [`public/strings.js`](public/strings.js). There is no settings screen on
@@ -34,6 +34,7 @@ purpose: change a constant, redeploy.
 | `src/rules.js` | The rules as constants |
 | `src/items.js` | Rack, Vault and Heap routes: list, save, lookup and the actions |
 | `src/review.js` | The daily line, spaced review, takeaway edits and related Vault items |
+| `src/highlights.js` | Highlight routes: list, create, note, star (one per article), delete, and the Vault's for exports |
 | `src/db.js` | Runs the migrations once per Worker instance, and the expiry sweep |
 | `src/migrations.js` | The list of migration files, in order |
 | `src/page.js` | URL normalising, fetching a page for its title, description, image, favicon, author, language and reading time, and the raw HTML for the reader |
@@ -52,6 +53,8 @@ purpose: change a constant, redeploy.
 | `public/search.js` | Vault search (`site:`, `intent:`, `before:`, `after:`) shared with the palette |
 | `public/reader.js`, `reader.css` | The reader at `#read/42`: settings, progress, background extraction, offline copies |
 | `public/extract.js` | Readability + DOMPurify extraction in the browser, images through `/img` |
+| `public/highlights.js`, `highlights.css` | Highlights in the reader: the text-quote anchoring, the popover, the margin list, and highlight choices under Done |
+| `public/finish.js`, `finish.css` | Finish detection, the stamp, and the page stack at the foot of the reader |
 | `public/vendor/` | Readability.js and DOMPurify, vendored as single files with their licences (versions below) |
 | `public/export.js`, `zip.js` | Markdown, JSON and Obsidian zip exports, built in the browser |
 | `public/save.html`, `save.js` | Save page used by the share menu and the bookmarklet |
@@ -184,6 +187,29 @@ the original instead and doesn't try again. Rack articles and their images
 are kept for offline reading. An article's text is deleted when it goes to
 the Heap; Vault articles keep theirs.
 
+**Highlights.** Select text and press `h` (or the small **Highlight** button)
+to mark it in a soft pencil wash. Click a highlight for **Note** (`n`),
+**Star as takeaway** (`s`) or **Remove**; with text selected, `n` highlights
+and opens the note at once. On wide screens your highlights sit quietly in the
+right margin. Each one is stored as its exact words plus a little text either
+side, so it finds its place again on any device even if the article is
+extracted afresh. At **Done** (in the rack or the reader) your highlights are
+listed under the takeaway field: pick one to star it and use it as the
+takeaway. A starred highlight also joins the daily line.
+
+**Highlights earn the Vault.** An article that expires with at least one
+highlight goes to the Vault as "kept, unfinished" instead of the Heap, with
+its text and highlights. A toss keeps highlights only through its Undo.
+
+**Finishing.** Reach the end of a rack article having spent at least about
+40% of its reading time actually reading (20 seconds when the length is
+unknown) and a stamp with the date lands at the foot of the page, with the
+takeaway prompt under it: Enter keeps it, Esc dismisses. Scrolling straight to
+the bottom doesn't count. A thin stack of page edges at the bottom of the
+screen thins as you read, with a notch for each section. When you read
+without touching the mouse, everything but the text and that stack fades.
+All motion is skipped under reduced motion.
+
 Vendored, unmodified, from npm: `@mozilla/readability` **0.6.0**
 (`public/vendor/Readability.js`, Apache-2.0) and `dompurify` **3.4.17**
 (`public/vendor/purify.es.mjs`, Apache-2.0 or MPL-2.0). To update one,
@@ -266,12 +292,12 @@ curl -s -H "$P" -H 'Content-Type: application/json' \
 ## API
 
 Every call needs the `X-Passcode` header and starts with the sweep: rack items
-past their expiry move to the Heap, and Heap items older than 30 days are
-deleted. That is how expiry works without a scheduled job.
+past their expiry move to the Heap (or to the Vault as `kept` when they have a
+highlight), and Heap items older than 30 days are deleted. That is how expiry works without a scheduled job.
 
 | Method and path | Does |
 | --- | --- |
-| `GET /api/items` | Returns `rack` (expiring soonest first), `vault` and `heap` |
+| `GET /api/items` | Returns `rack` (expiring soonest first), `vault` and `heap`; rack and Vault rows carry a `highlights` count |
 | `POST /api/items` | Saves `{url, dropId?, title?, note?}`. `409` with the rack list when full and no `dropId`. For a URL already in the rack, a `note` sets that item's note (answer stays `in_rack`) |
 | `GET /api/lookup?url=…` | `{status: 'in_rack' | 'in_vault' | 'new', id?}` for the browser extension |
 | `POST /api/items/:id/intent` | Sets `{intent}`: `tonight`, `commute`, `weekend` or `null` |
@@ -290,6 +316,11 @@ deleted. That is how expiry works without a scheduled job.
 | `POST /api/items/:id/takeaway` | Rewrites a Vault item's `{takeaway}` |
 | `GET /api/items/:id/related` | Up to 3 Vault items from the same site or sharing words with it |
 | `POST /api/items/:id/note` | Sets `{note}` (up to 200 characters; empty clears it) on a rack item |
+| `GET /api/items/:id/highlights` | `{highlights: [{id, item_id, quote, prefix, suffix, note, starred, created_at}]}` for a rack or Vault item |
+| `POST /api/items/:id/highlights` | Adds `{quote, prefix, suffix, note?}`; answers `201 {highlight, count}` |
+| `POST /api/highlights/:id` | Sets `{note?, starred?}`; starring one clears the star on the article's others |
+| `POST /api/highlights/:id/delete` | Removes it; answers `{ok, count}` |
+| `GET /api/highlights` | Every Vault highlight, for the exports |
 | `POST /api/items/:id/refresh` | Fetches the page again for its details; what it can't find keeps its old value |
 | `GET /img?u=…` | The image proxy (see below). Not under `/api/` and needs no header |
 
@@ -346,4 +377,5 @@ databases with virtual tables, which the full-text index (`search`, FTS5) is;
 Time Travel and the exports below are unaffected. The **Export** links at the bottom of
 the Vault tab (or the palette) save the Vault as Markdown, everything as JSON,
 or the Vault as a zip of Obsidian notes, one per article with its URL, site,
-dates and intent in the frontmatter.
+dates and intent in the frontmatter. Exports include each Vault article's
+highlights and notes (★ marks the takeaway).

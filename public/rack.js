@@ -3,6 +3,7 @@ import { S } from './strings.js';
 import { el } from './api.js';
 import * as store from './store.js';
 import { decay, fade, proxiedImg, thumbnail, timeLeft, untilDay, urlPath } from './format.js';
+import { takeawayChoices } from './highlights.js';
 
 export function createRackPanel() {
   const input = el('input', { type: 'url', placeholder: S.addPlaceholder, 'aria-label': S.addPlaceholder, required: true });
@@ -156,7 +157,8 @@ export function createRackPanel() {
       'form',
       { className: 'takeaway' },
       el('label', {}, S.takeawayPrompt),
-      el('div', { className: 'row' }, field, keep, skip)
+      el('div', { className: 'row' }, field, keep, skip),
+      takeawayChoices(item, field) // Phase 5: a highlight as the takeaway
     );
     prompt.addEventListener('submit', (e) => {
       e.preventDefault();
