@@ -325,6 +325,15 @@ a.title:hover { text-decoration: underline; text-decoration-thickness: 1px; text
 }
 .actions .text:hover, .intent:hover { color: var(--fg); }
 .actions .open { color: var(--accent); font-weight: 500; }
+/* With a mouse, the rack stays quiet at rest: actions appear on hover,
+   focus or keyboard selection. A set intent stays visible. Touch screens
+   keep them shown, since there is no hover. */
+@media (hover: hover) and (pointer: fine) {
+  .rack .actions > :not(.intent.set) { opacity: 0; transition: opacity 0.15s; }
+  .rack .item:hover .actions > *,
+  .rack .item:focus-within .actions > *,
+  .rack .item[aria-selected="true"] .actions > * { opacity: 1; }
+}
 .intent {
   field-sizing: content;
   appearance: none;
