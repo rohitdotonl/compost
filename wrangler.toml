@@ -8,8 +8,14 @@ compatibility_date = "2026-10-01"
 directory = "./public"
 binding = "ASSETS"
 
+# No database_id needed: `wrangler deploy` (4.45 or newer) creates the
+# database on the first deploy and keeps it linked after that.
 [[d1_databases]]
 binding = "DB"
 database_name = "compost"
-# Paste the id printed by `npx wrangler d1 create compost`.
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+
+# Lets the Worker import schema.sql and create the table itself.
+[[rules]]
+type = "Text"
+globs = ["**/*.sql"]
+fallthrough = true

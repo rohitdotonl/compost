@@ -205,3 +205,16 @@ blockquote {
 }
 .choices input { width: auto; flex: none; }
 .choices .site { color: var(--muted); font-size: 0.9rem; display: block; }
+
+/* Bookmarklet page */
+.bookmarklet { border-color: var(--fg); cursor: grab; }
+textarea {
+  width: 100%;
+  font: 0.85rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--fg);
+  resize: vertical;
+}

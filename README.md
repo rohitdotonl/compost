@@ -29,64 +29,60 @@ screen on purpose: change a constant, redeploy.
 | File | Purpose |
 | --- | --- |
 | `wrangler.toml` | Worker config: static assets folder and the D1 binding |
-| `schema.sql` | The one table, `items` |
+| `schema.sql` | The one table, `items`. The Worker applies it itself on first run |
 | `src/worker.js` | API routes, rules, expiry sweep, title fetching |
 | `public/index.html`, `app.js`, `style.css` | Main page: Rack, Vault and Heap tabs |
 | `public/save.html`, `save.js` | Save page used by the share menu and the bookmarklet |
 | `public/api.js` | The passcode and API helper both pages share |
+| `public/bookmarklet.html`, `bookmarklet.js` | Shows the bookmarklet with your address filled in |
+| `setup.sh` | Logs in, deploys and sets the passcode in one go |
+| `.dev.vars.example` | Tells the Deploy button to ask for `PASSCODE` |
 | `public/strings.js` | All user-facing copy |
 | `public/manifest.webmanifest`, `sw.js`, `icons/` | PWA install and the Android share target |
 
 ## Set it up
 
-You need a Cloudflare account (the free plan is enough) and Node.js 18 or newer
-on your computer. Wrangler, Cloudflare's command-line tool, runs through `npx`,
-so nothing gets installed into the project.
+You need a free Cloudflare account. There are no other accounts, keys or
+services. The database is created for you on the first deploy, and the Worker
+creates its own table the first time it runs.
 
-### 1. Log in
+Pick one of these three ways.
 
-```sh
-npx wrangler login
-```
+### Option A: the Cloudflare dashboard (no terminal)
 
-### 2. Create the D1 database
+This also redeploys automatically every time `main` changes.
 
-```sh
-npx wrangler d1 create compost
-```
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com), go to
+   **Workers & Pages → Create → Import a repository**, connect GitHub and pick
+   this repository. Keep the default settings and click **Deploy**.
+2. When it finishes, open the Worker's **Settings → Variables and Secrets**,
+   add a **Secret** named `PASSCODE` with the passcode you want, and save.
+3. Open the `*.workers.dev` address shown on the Worker's page.
 
-This prints a `database_id`. Paste it into `wrangler.toml` in place of
-`REPLACE_WITH_YOUR_DATABASE_ID`.
+### Option B: one script
 
-### 3. Apply the schema
-
-```sh
-npx wrangler d1 execute compost --remote --file=schema.sql
-```
-
-### 4. Set the passcode
+With Node.js 18 or newer installed, run this from the repository folder:
 
 ```sh
-npx wrangler secret put PASSCODE
+./setup.sh
 ```
 
-Type the passcode when asked. It is stored as an encrypted Worker secret, never
-in the code. Every API call without it gets a 401.
+It logs you in to Cloudflare in the browser, deploys (creating the database),
+and asks for the passcode. Run it again any time to redeploy.
 
-To change it later, run the same command again. Each device will ask for the new
-one on its next open.
+### Option C: the Deploy button
 
-### 5. Deploy
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/rohitdotonl/compost)
 
-```sh
-npx wrangler deploy
-```
+This copies the repository into your own GitHub account, creates the database
+and asks for the passcode during setup. It suits anyone else who wants their
+own Compost.
 
-Wrangler prints the app's address, something like
-`https://compost.<your-subdomain>.workers.dev`. Open it, enter the passcode once,
-and you are in.
+### Changing the passcode
 
-To redeploy after changing anything, run `npx wrangler deploy` again.
+Change the `PASSCODE` secret in the dashboard, or run
+`npx wrangler secret put PASSCODE`. Each device asks for the new one on its
+next open. Every API call without the right passcode gets a 401.
 
 ## Install on Android
 
@@ -103,25 +99,21 @@ entered in step 1 carries over.
 
 ## Add the bookmarklet (desktop)
 
-Create a new bookmark in your browser's bookmarks bar, name it "Compost", and
-paste this as its URL, with your own address in place of the placeholder:
-
-```
-javascript:(()=>{window.open('https://compost.YOUR-SUBDOMAIN.workers.dev/save?url='+encodeURIComponent(location.href),'compost','width=440,height=620')})()
-```
+Open your Compost address with `/bookmarklet` on the end (there is also a
+"Save from your browser" link at the bottom of the app). It shows a button with
+your own address already filled in: drag it to your bookmarks bar.
 
 Clicking it on any page opens the Save page in a small popup. The first time,
-it asks for your passcode; after that it saves straight away. The popup closes
-with **Close**.
+it asks for your passcode; after that it saves straight away.
 
 Until you set it up, you can paste links into the **Add link** field at the top
 of the Rack.
+
 
 ## Run it locally
 
 ```sh
 echo 'PASSCODE=letmein' > .dev.vars
-npx wrangler d1 execute compost --local --file=schema.sql
 npx wrangler dev
 ```
 

@@ -63,6 +63,15 @@ export const S = {
   noLink: 'No link found to save.',
   invalidLink: 'That doesn’t look like a link.',
 
+  // Bookmarklet page
+  bookmarkletLink: 'Save from your browser',
+  bookmarkletTitle: 'Save from your browser',
+  bookmarkletDrag: 'Drag this button to your bookmarks bar:',
+  bookmarkletName: 'Save to Compost',
+  bookmarkletUse: 'Click it on any page to save that page. The first time, it asks for your passcode.',
+  bookmarkletCopy: 'Can’t drag? Create a bookmark by hand and paste this as its address:',
+  back: 'Back to your rack',
+
   // Errors
   offline: 'Couldn’t reach Compost. Try again.',
   retry: 'Try again',
