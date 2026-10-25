@@ -215,7 +215,7 @@ async function loadContent(item) {
     setStatus(item.id, 'failed');
     return { failed: true };
   }
-  if (status === 404 && data.error === 'no_content') {
+  if (status === 200 && data.status === 'none') {
     const extracted = await extractAndStore(item);
     return extracted ? { ...extracted, progress: data.progress, last_read_at: data.last_read_at } : { failed: true };
   }
@@ -431,11 +431,18 @@ async function renderArticle(item, content) {
   }
   renderEnd(item);
 
-  current.progress = resumePoint(item, content);
-  current.restoreTo = current.progress;
+  const resume = resumePoint(item, content);
+  current.progress = resume.progress;
+  current.restoreTo = resume.progress;
   restoreScroll();
   ticker = setInterval(tick, 1000);
   saver = setInterval(() => saveProgress(false), SAVE_EVERY);
+  // A save that never reached the server (offline, or lost as the page went
+  // away) is sent now.
+  if (resume.unsent) {
+    current.dirty = true;
+    saveProgress(false);
+  }
   window.dispatchEvent(new CustomEvent('compost:article', { detail: { id: item.id, item, root: view.body } }));
 }
 
@@ -474,13 +481,13 @@ function askTakeaway(item) {
 // ---------------------------------------------------------------------------
 
 // The most recent of the server's position and this device's own copy
-// (which also covers saves made while offline).
+// (which also covers saves made while offline). → { progress, unsent }
 function resumePoint(item, content) {
   const local = readJSON(PROGRESS_KEY, {})[item.id];
-  const serverAt = content.last_read_at || item.last_read_at || 0;
+  const serverAt = content.last_read_at || 0;
   const server = Number(content.progress ?? item.progress) || 0;
-  if (local && local.t > serverAt) return local.p;
-  return server;
+  if (local && local.t > serverAt && Math.abs(local.p - server) > 0.001) return { progress: local.p, unsent: true };
+  return { progress: server, unsent: false };
 }
 
 function scrollFraction() {
@@ -540,7 +547,7 @@ function saveProgress(keepalive) {
   item.last_read_at = at;
   const local = readJSON(PROGRESS_KEY, {});
   local[id] = { p: progress, t: at };
-  writeJSON(PROGRESS_KEY, local);
+  writeJSON(PROGRESS_KEY, Object.fromEntries(Object.entries(local).sort((x, y) => y[1].t - x[1].t).slice(0, 50)));
   fetch(`/api/items/${id}/progress`, {
     method: 'POST',
     keepalive,

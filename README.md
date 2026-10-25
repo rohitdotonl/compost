@@ -35,7 +35,8 @@ purpose: change a constant, redeploy.
 | `src/items.js` | Rack, Vault and Heap routes: list, save, lookup and the actions |
 | `src/db.js` | Runs the migrations once per Worker instance, and the expiry sweep |
 | `src/migrations.js` | The list of migration files, in order |
-| `src/page.js` | URL normalising, fetching a page for its title and reading time |
+| `src/page.js` | URL normalising, fetching a page for its title and reading time, and the raw HTML for the reader |
+| `src/reader.js` | Reader routes: raw page, stored article, progress, full-text search |
 | `src/http.js` | JSON responses, body reading, passcode comparison |
 | `public/index.html`, `app.js`, `style.css` | Main page shell: header, tabs, status line |
 | `public/store.js` | State, localStorage cache, optimistic actions, row selection |
@@ -44,6 +45,9 @@ purpose: change a constant, redeploy.
 | `public/keys.js` | Keyboard shortcuts, paste-to-save and the `#vault?q=…` / `#item/42` links |
 | `public/palette.js`, `palette.css` | The ⌘K command palette and the shortcut sheet |
 | `public/search.js` | Vault search (`site:`, `intent:`, `before:`, `after:`) shared with the palette |
+| `public/reader.js`, `reader.css` | The reader at `#read/42`: settings, progress, background extraction, offline copies |
+| `public/extract.js` | Readability + DOMPurify extraction in the browser, images through `/img` |
+| `public/vendor/` | Readability.js and DOMPurify, vendored as single files with their licences (versions below) |
 | `public/export.js`, `zip.js` | Markdown, JSON and Obsidian zip exports, built in the browser |
 | `public/save.html`, `save.js` | Save page used by the share menu and the bookmarklet |
 | `public/api.js` | The passcode and API helper both pages share |
@@ -147,6 +151,28 @@ The Vault search understands `site:nytimes.com`, `intent:weekend`,
 plain words matched against titles and takeaways. Searches are linkable:
 `/#vault?q=site:nytimes.com`, and so is one article: `/#item/42`.
 
+## Reading
+
+Click an article's title (or press `o`) to read it in Compost: clean text in
+one column, set for reading. **Open original** (Shift+O) is always at the top
+for paywalls, PDFs and pages that extract badly. **Aa** holds the text size,
+width, serif or sans, and light, sepia or dark; these stay on that device.
+Compost remembers where you stopped and resumes there on any device. Esc
+goes back to the rack.
+
+The first time an article is opened, your browser extracts it (the Worker
+only fetches the page) and stores the clean text for every device; articles
+in the rack are also extracted quietly in the background while the app is
+open. If a page has no readable article (a paywall, a video), Compost opens
+the original instead and doesn't try again. Rack articles and their images
+are kept for offline reading. An article's text is deleted when it goes to
+the Heap; Vault articles keep theirs.
+
+Vendored, unmodified, from npm: `@mozilla/readability` **0.6.0**
+(`public/vendor/Readability.js`, Apache-2.0) and `dompurify` **3.4.17**
+(`public/vendor/purify.es.mjs`, Apache-2.0 or MPL-2.0). To update one,
+`npm pack` the package and copy the same file over.
+
 ## Add the bookmarklet (desktop)
 
 Open your Compost address with `/bookmarklet` on the end (there is also a
@@ -237,6 +263,12 @@ deleted. That is how expiry works without a scheduled job.
 | `POST /api/items/:id/toss` | Moves to the Heap |
 | `POST /api/items/:id/untoss` | Reverses a toss, only within 10 seconds of it and only while a slot is free (the Undo; not a Heap restore) |
 | `POST /api/items/:id/extend` | Adds 48 hours, once |
+| `GET /api/items/:id/raw` | `{url, html}`: the page's raw HTML (5s, 3MB cap) and its address after redirects, for extraction in the browser. `422` when it can't be fetched |
+| `GET /api/items/:id/content` | `{status, html, words, excerpt, byline, extracted_at, progress, last_read_at, minutes}`. `status` is `ok`, `failed` or `none` (not extracted yet) |
+| `POST /api/items/:id/content` | Stores `{html, text, words, excerpt, byline}` and sets the reading time from `words`, or `{status: 'failed'}` |
+| `POST /api/items/:id/progress` | Stores `{progress}` (0–1) and the time; `seconds` is accepted and ignored for now |
+| `GET /api/contents` | `{contents: [{id, status, words}]}` for the rack, for background extraction |
+| `GET /api/search?q=…` | `{results: [{id, in: 'rack' \| 'vault', snippet}]}`: full-text search over titles, article text and takeaways; `snippet` is escaped HTML with `<mark>` |
 
 A save answers with `status`: `saved`, `in_rack`, `in_vault`, `full` or
 `invalid_url`. URLs are normalised before comparing (tracking parameters such as
@@ -268,7 +300,9 @@ counterparts are not).
 ## Backups
 
 D1 keeps 7 days of point-in-time recovery on the free plan
-(`npx wrangler d1 time-travel --help`). The **Export** links at the bottom of
+(`npx wrangler d1 time-travel --help`). Note that `wrangler d1 export` refuses
+databases with virtual tables, which the full-text index (`search`, FTS5) is;
+Time Travel and the exports below are unaffected. The **Export** links at the bottom of
 the Vault tab (or the palette) save the Vault as Markdown, everything as JSON,
 or the Vault as a zip of Obsidian notes, one per article with its URL, site,
 dates and intent in the frontmatter.

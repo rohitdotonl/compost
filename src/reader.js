@@ -41,7 +41,8 @@ async function getRaw({ db, fetchRaw }, { id }) {
 }
 
 // GET /api/items/:id/content → the stored article plus where you stopped.
-// 404 { error: 'no_content' } until the browser has extracted it.
+// Until the browser has extracted it, status is 'none' (a 200, so the
+// browser console stays quiet) with just the progress.
 async function getContent({ db }, { id }) {
   const row = await db
     .prepare(
@@ -51,7 +52,7 @@ async function getContent({ db }, { id }) {
     .bind(id)
     .first();
   if (!row) return json({ error: 'not_found' }, 404);
-  if (!row.status) return json({ error: 'no_content', progress: row.progress, last_read_at: row.last_read_at }, 404);
+  if (!row.status) return json({ status: 'none', progress: row.progress, last_read_at: row.last_read_at });
   return json(row);
 }
 

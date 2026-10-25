@@ -49,12 +49,13 @@ test('GET /raw answers 422 when the page cannot be fetched, 404 for unknown item
   assert.equal((await app.call('GET', '/api/items/999/raw')).status, 404);
 });
 
-test('content is 404 until stored, then comes back with the real reading time', async () => {
+test('content is "none" until stored, then comes back with the real reading time', async () => {
   const app = makeApp();
   const id = await savedItem(app);
   const before = await app.call('GET', `/api/items/${id}/content`);
-  assert.equal(before.status, 404);
-  assert.equal(before.data.error, 'no_content');
+  assert.equal(before.status, 200);
+  assert.equal(before.data.status, 'none');
+  assert.equal(before.data.html, undefined);
 
   const saved = await storeContent(app, id);
   assert.equal(saved.status, 200);

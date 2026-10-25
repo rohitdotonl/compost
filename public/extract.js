@@ -111,6 +111,7 @@ export async function extract(rawHtml, pageUrl) {
 
   const fragment = DOMPurify.sanitize(article.content, { ...PURIFY, RETURN_DOM_FRAGMENT: true });
   tidy(fragment, pageUrl);
+  dropBylineLine(fragment, article.byline);
   const box = document.createElement('div');
   box.append(fragment);
 
@@ -163,6 +164,17 @@ function tidy(root, base) {
     if (!value) continue;
     node.nodeValue = smarten(value, before);
     before = value[value.length - 1];
+  }
+}
+
+// The reader shows the byline in its header, so a short "By …" line near
+// the top of the article is a duplicate.
+function dropBylineLine(root, byline) {
+  if (!byline) return;
+  const needle = byline.trim().toLowerCase();
+  for (const node of [...root.querySelectorAll('p, div')].slice(0, 4)) {
+    const text = node.textContent.trim();
+    if (text.length < 160 && text.toLowerCase().includes(needle)) return node.remove();
   }
 }
 
