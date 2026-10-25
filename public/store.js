@@ -204,6 +204,16 @@ export function setIntent(id, intent) {
   );
 }
 
+// Rewrites a Vault item's takeaway (Phase 6).
+export function editTakeaway(id, takeaway) {
+  const item = state.data && state.data.vault.find((i) => i.id === id);
+  if (!item) return;
+  return optimistic(
+    () => place({ ...item, takeaway: takeaway || null }),
+    () => api(`/api/items/${id}/takeaway`, { takeaway })
+  );
+}
+
 // Saving waits for the server (it fetches the title). Resolves to the
 // response data, or null when the request failed.
 export async function add(url) {

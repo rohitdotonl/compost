@@ -9,7 +9,9 @@
 // wrangler imports .sql files as text (see [[rules]] in wrangler.toml); the
 // tests do the same with a small loader hook.
 import m0001 from '../migrations/0001_init.sql';
+import m0006 from '../migrations/0006_reviews.sql';
 
 export const MIGRATIONS = [
   [1, m0001],
+  [6, m0006],
 ];

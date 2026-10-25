@@ -33,6 +33,7 @@ purpose: change a constant, redeploy.
 | `src/worker.js` | Entry: passcode check and the routing table |
 | `src/rules.js` | The rules as constants |
 | `src/items.js` | Rack, Vault and Heap routes: list, save, lookup and the actions |
+| `src/review.js` | The daily line, spaced review, takeaway edits and related Vault items |
 | `src/db.js` | Runs the migrations once per Worker instance, and the expiry sweep |
 | `src/migrations.js` | The list of migration files, in order |
 | `src/page.js` | URL normalising, fetching a page for its title and reading time |
@@ -40,6 +41,7 @@ purpose: change a constant, redeploy.
 | `public/index.html`, `app.js`, `style.css` | Main page shell: header, tabs, status line |
 | `public/store.js` | State, localStorage cache, optimistic actions, row selection |
 | `public/rack.js`, `vault.js`, `heap.js` | One module per tab |
+| `public/daily.js`, `daily.css` | The daily line at the top of the Rack |
 | `public/format.js` | Dates and the expiry fade |
 | `public/keys.js` | Keyboard shortcuts, paste-to-save and the `#vault?q=…` / `#item/42` links |
 | `public/palette.js`, `palette.css` | The ⌘K command palette and the shortcut sheet |
@@ -125,6 +127,16 @@ shows the link only as text, Compost still finds the first URL in it.
 
 The installed app and Chrome on Android share storage, so the passcode you
 entered in step 1 carries over.
+
+## The daily line
+
+Once the Vault holds 20 takeaways, the top of the Rack shows one of them each
+day, with the article it came from. **Still useful** brings it back later (1
+day, then a week, a month, 3 months, 6 months); **Let it go** stops it coming
+back but keeps it in the Vault. The pick is made on the first open of the day
+(your local date) and stored, so every device shows the same line. Nothing is
+counted. To rewrite a takeaway, click it in the Vault (or select the row and
+press `e`); Enter saves, Esc cancels.
 
 ## Keyboard (desktop)
 
@@ -237,6 +249,10 @@ deleted. That is how expiry works without a scheduled job.
 | `POST /api/items/:id/toss` | Moves to the Heap |
 | `POST /api/items/:id/untoss` | Reverses a toss, only within 10 seconds of it and only while a slot is free (the Undo; not a Heap restore) |
 | `POST /api/items/:id/extend` | Adds 48 hours, once |
+| `GET /api/daily?day=YYYY-MM-DD` | The day's line `{day, review}` (`review` is `null` with fewer than 20 takeaways); pinned per date |
+| `POST /api/reviews/:id` | `{answer}`: `keep` ("Still useful") or `retire` ("Let it go") |
+| `POST /api/items/:id/takeaway` | Rewrites a Vault item's `{takeaway}` |
+| `GET /api/items/:id/related` | Up to 3 Vault items from the same site or sharing words with it |
 
 A save answers with `status`: `saved`, `in_rack`, `in_vault`, `full` or
 `invalid_url`. URLs are normalised before comparing (tracking parameters such as

@@ -118,7 +118,7 @@ export const S = {
     ['d', 'Done, with a takeaway'],
     ['x', 'Toss'],
     ['u', 'Undo a toss'],
-    ['e', '+48h'],
+    ['e', '+48h, or edit a Vault takeaway'],
     ['c', 'Copy link'],
     ['1 2 3', 'Tonight, commute, weekend'],
     ['a', 'Add link'],
@@ -128,4 +128,12 @@ export const S = {
     ['Esc', 'Back out'],
     ['?', 'This sheet'],
   ],
+
+  // Phase 6: daily
+  dailyFrom: (title) => `From ${title}`,
+  dailyFinished: (date) => `finished ${date}`,
+  dailyKeep: 'Still useful',
+  dailyLetGo: 'Let it go',
+  dailyLabel: 'A line from your Vault',
+  takeawayEdit: 'Edit takeaway',
 };

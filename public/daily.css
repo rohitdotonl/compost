@@ -1,0 +1,38 @@
+/* The daily line (Phase 6): an epigraph at the top of the Rack. */
+.daily {
+  margin: 16px 0 40px;
+}
+.daily-quote {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.35rem;
+  line-height: 1.45;
+  color: var(--fg);
+}
+.daily-from {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.daily-from a { color: inherit; text-decoration: none; }
+.daily-from a:hover { text-decoration: underline; }
+.daily-actions {
+  display: flex;
+  gap: 20px;
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+}
+.daily-actions .link { color: var(--muted); font-size: inherit; text-decoration: none; }
+.daily-actions .link:hover, .daily-actions .link:focus-visible { color: var(--fg); }
+.daily-after { transition: opacity 0.4s ease; }
+.daily-after.leaving { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-after { transition: none; }
+}
+
+/* Rewriting a takeaway in the Vault (vault.js). */
+blockquote.editable { cursor: text; }
+.takeaway-edit { margin-top: 12px; }

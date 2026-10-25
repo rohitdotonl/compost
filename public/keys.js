@@ -106,6 +106,7 @@ function press(key, target) {
     case 'u':
       return undo();
     case 'e':
+      if (rackId == null && id != null && store.locate(id)?.tab === 'vault') return panels().vault.editTakeaway(id), true;
       if (rackId == null) return false;
       if (store.rackItem(rackId).extended) store.setStatus(S.alreadyExtended);
       else store.extend(rackId);
