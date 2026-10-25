@@ -132,6 +132,8 @@ export const S = {
     ['g r / v / h', 'Rack, Vault, Heap'],
     ['⌘K / Ctrl K', 'Command palette'],
     ['h / n', 'Highlight the selection / add a note (reading)'],
+    ['s', 'Star a highlight as the takeaway (reading)'],
+    ['Shift O', 'Open the original (reading)'],
     ['Esc', 'Back out'],
     ['?', 'This sheet'],
   ],

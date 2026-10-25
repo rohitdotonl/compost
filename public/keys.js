@@ -66,7 +66,7 @@ function onKeydown(e) {
   }
   if (isPaletteOpen() || mod || e.altKey || e.isComposing || isTyping(e.target)) return;
   if (sheet && e.key !== '?') return;
-  if (isReading()) return void (readerKey(e.key) && e.preventDefault()); // Phase 4: rack keys are off while reading
+  if (isReading() && e.key !== '?') return void (readerKey(e.key) && e.preventDefault()); // Phase 4: rack keys are off while reading
   if (press(e.key, e.target)) e.preventDefault();
 }
 
