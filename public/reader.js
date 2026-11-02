@@ -140,6 +140,7 @@ async function open(id) {
   fillHead(item, null);
   view.body.replaceChildren(el('p', { className: 'reader-wait' }, S.readerLoading));
   view.end.replaceChildren();
+  view.left.textContent = '';
   window.scrollTo(0, 0);
   wakeChrome();
 
@@ -170,7 +171,8 @@ function close() {
   current = null;
   fromApp = false;
   view.element.hidden = true;
-  view.controls.hidden = true;
+  closeControls({ animate: false });
+  view.left.textContent = '';
   view.body.replaceChildren();
   document.body.classList.remove('reading');
   delete document.documentElement.dataset.readerTheme;
@@ -373,19 +375,44 @@ async function fetchToCache(item) {
 // The page
 // ---------------------------------------------------------------------------
 
+// Small line icons, drawn here so the bar needs no image files.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function icon(paths, size = 20) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', size);
+  svg.setAttribute('height', size);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.setAttribute('class', 'reader-icon');
+  for (const d of paths) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
+}
+const ICON_BACK = ['M15 4.5 7.5 12l7.5 7.5'];
+const ICON_ORIGINAL = ['M13.5 4.5h6v6', 'M19.5 4.5 11 13', 'M17.5 13.5v4a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h4'];
+const ICON_CLOSE = ['M6.5 6.5l11 11', 'M17.5 6.5l-11 11'];
+
 function buildView() {
-  const back = el('a', { href: '#rack', className: 'reader-back', 'aria-label': S.readerBackLabel }, '← ', S.readerBack);
+  const back = el('a', { href: '#rack', className: 'reader-back', 'aria-label': S.readerBackLabel }, icon(ICON_BACK, 22), el('span', {}, S.readerBack));
   back.addEventListener('click', (e) => { e.preventDefault(); leave(); });
-  const aa = el('button', { type: 'button', className: 'reader-aa', 'aria-label': S.readerSettingsLabel, 'aria-expanded': 'false' }, S.readerSettings);
-  const original = el('a', { className: 'reader-original', target: '_blank', rel: 'noopener noreferrer' }, S.readerOriginal);
-  const bar = el('nav', { className: 'reader-bar' }, back, el('span', { className: 'reader-spacer' }), aa, original);
+  const barTitle = el('span', { className: 'reader-bar-title', 'aria-hidden': 'true' });
+  const aa = el('button', { type: 'button', className: 'reader-aa reader-round', 'aria-label': S.readerSettingsLabel, 'aria-expanded': 'false', 'aria-haspopup': 'dialog' }, S.readerSettings);
+  const original = el('a', { className: 'reader-original reader-round', target: '_blank', rel: 'noopener noreferrer', 'aria-label': S.readerOriginal, title: S.readerOriginal }, icon(ICON_ORIGINAL, 19));
+  const bar = el('nav', { className: 'reader-bar' }, el('div', { className: 'reader-bar-start' }, back), barTitle, el('div', { className: 'reader-bar-end' }, aa, original));
   const controls = buildControls();
   controls.hidden = true;
+  const scrim = el('div', { className: 'reader-scrim', hidden: true });
+  scrim.addEventListener('click', () => closeControls());
   aa.addEventListener('click', () => {
-    controls.hidden = !controls.hidden;
-    aa.setAttribute('aria-expanded', String(!controls.hidden));
+    if (controls.hidden || controls.classList.contains('closing')) openControls();
+    else closeControls();
     wakeChrome();
   });
+  window.addEventListener('resize', () => { if (!controls.hidden) placeControls(); });
 
   const favicon = el('img', { className: 'reader-favicon', alt: '', width: 16, height: 16 });
   favicon.addEventListener('error', () => (favicon.hidden = true));
@@ -396,8 +423,55 @@ function buildView() {
   const body = el('div', { className: 'reader-body' });
   const end = el('footer', { className: 'reader-end' });
   const page = el('article', { className: 'reader-page' }, head, body, end);
-  const element = el('div', { className: 'reader', hidden: true }, bar, controls, page);
-  return { element, bar, aa, controls, original, favicon, site, title, meta, body, end };
+  const left = el('p', { className: 'reader-left', 'aria-hidden': 'true' });
+  const element = el('div', { className: 'reader', hidden: true }, bar, page, left, scrim, controls);
+  return { element, bar, barTitle, aa, controls, scrim, original, favicon, site, title, meta, body, end, left };
+}
+
+// The settings: a bottom sheet on phones, a popover under Aa elsewhere.
+function openControls() {
+  clearTimeout(view.closing);
+  view.controls.classList.remove('closing');
+  view.scrim.classList.remove('closing');
+  view.controls.hidden = false;
+  view.scrim.hidden = false;
+  view.aa.setAttribute('aria-expanded', 'true');
+  placeControls();
+  view.controls.focus({ preventScroll: true });
+}
+
+function closeControls({ animate = true } = {}) {
+  if (view.controls.hidden) return;
+  view.aa.setAttribute('aria-expanded', 'false');
+  const calm = !animate || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const hide = () => {
+    view.controls.classList.remove('closing');
+    view.scrim.classList.remove('closing');
+    view.controls.hidden = true;
+    view.scrim.hidden = true;
+  };
+  if (view.controls.contains(document.activeElement)) view.aa.focus({ preventScroll: true });
+  if (calm) return hide();
+  view.controls.classList.add('closing');
+  view.scrim.classList.add('closing');
+  clearTimeout(view.closing);
+  view.closing = setTimeout(hide, 200);
+}
+
+// The popover hangs under the Aa button and never leaves the screen.
+function placeControls() {
+  const c = view.controls;
+  if (matchMedia('(max-width: 599px)').matches) {
+    c.style.removeProperty('top');
+    c.style.removeProperty('left');
+    return;
+  }
+  const a = view.aa.getBoundingClientRect();
+  const width = c.offsetWidth;
+  const left = Math.min(window.innerWidth - width - 12, Math.max(12, a.right - width + 8));
+  c.style.top = `${Math.round(a.bottom + 10)}px`;
+  c.style.left = `${Math.round(left)}px`;
+  c.style.setProperty('--arrow-x', `${Math.round(a.left + a.width / 2 - left)}px`);
 }
 
 function fillHead(item, content) {
@@ -408,6 +482,7 @@ function fillHead(item, content) {
   else view.favicon.removeAttribute('src');
   view.site.textContent = item.site;
   view.title.textContent = item.title;
+  view.barTitle.textContent = item.title;
   const parts = [];
   const byline = content && content.byline;
   if (byline) parts.push(byline);
@@ -431,11 +506,13 @@ async function renderArticle(item, content) {
     });
   }
   renderEnd(item);
+  current.minutes = content.minutes || item.minutes || 0;
 
   const resume = resumePoint(item, content);
   current.progress = resume.progress;
   current.restoreTo = resume.progress;
   restoreScroll();
+  drawLeft();
   ticker = setInterval(tick, 1000);
   saver = setInterval(() => saveProgress(false), SAVE_EVERY);
   // A save that never reached the server (offline, or lost as the page went
@@ -450,8 +527,8 @@ async function renderArticle(item, content) {
 // Done and Toss for rack articles. Done asks for the takeaway in place.
 function renderEnd(item) {
   if (item.outcome != null) return view.end.replaceChildren();
-  const doneBtn = el('button', { type: 'button' }, S.done);
-  const tossBtn = el('button', { type: 'button' }, S.toss);
+  const doneBtn = el('button', { type: 'button', className: 'primary' }, S.done);
+  const tossBtn = el('button', { type: 'button', className: 'secondary' }, S.toss);
   doneBtn.addEventListener('click', () => askTakeaway(item));
   tossBtn.addEventListener('click', () => {
     saveProgress(true);
@@ -466,7 +543,7 @@ function renderEnd(item) {
 function askTakeaway(item, { slide = false, focus = true } = {}) {
   const field = el('input', { type: 'text', maxLength: 500, 'aria-label': S.takeawayPrompt, enterKeyHint: 'done' });
   const keep = el('button', { type: 'submit' }, S.keep);
-  const skip = el('button', { type: 'button' }, S.skip);
+  const skip = el('button', { type: 'button', className: 'secondary' }, S.skip);
   const form = el(
     'form',
     { className: `takeaway${slide ? ' slide-in' : ''}` },
@@ -530,6 +607,7 @@ function onScroll() {
     if (Math.abs(progress - current.progress) < 0.0005) return;
     current.progress = progress;
     current.dirty = true;
+    drawLeft();
     window.dispatchEvent(new CustomEvent('compost:progress', { detail: articleDetail() }));
   });
 }
@@ -581,6 +659,18 @@ function saveProgress(keepalive) {
     .catch(() => { pendingSeconds += seconds; });
 }
 
+// "12 min left", or "Last page" near the end. Nothing when the length is unknown.
+function drawLeft() {
+  if (!current || !current.root) return;
+  const minutes = current.minutes;
+  if (!minutes) {
+    view.left.textContent = '';
+    return;
+  }
+  const left = Math.ceil(minutes * (1 - current.progress));
+  view.left.textContent = current.progress >= 0.97 || left < 1 ? S.readerLastPage : S.readerMinutesLeft(left);
+}
+
 function articleDetail() {
   const { id, progress, activeSeconds } = current;
   return { id, progress, activeSeconds };
@@ -603,9 +693,8 @@ function wakeChrome() {
 export function readerBackOut() {
   if (!current) return false;
   if (highlightBackOut()) return true; // Phase 5: a highlight's popover
-  if (!view.controls.hidden) {
-    view.controls.hidden = true;
-    view.aa.setAttribute('aria-expanded', 'false');
+  if (!view.controls.hidden && !view.controls.classList.contains('closing')) {
+    closeControls();
   } else if (view.end.querySelector('form')) {
     renderEnd(current.item);
   } else {
@@ -654,7 +743,8 @@ function applyPrefs() {
   r.dataset.font = p.font;
   if (current) document.documentElement.dataset.readerTheme = p.theme || '';
   for (const button of view.controls.querySelectorAll('[aria-pressed]')) {
-    button.setAttribute('aria-pressed', String(p[button.dataset.pref] === button.dataset.value));
+    const value = button.dataset.pref === 'theme' ? p.theme || 'auto' : p[button.dataset.pref];
+    button.setAttribute('aria-pressed', String(value === button.dataset.value));
   }
   view.controls.querySelector('[data-step="size-"]').disabled = p.size <= 0;
   view.controls.querySelector('[data-step="size+"]').disabled = p.size >= SIZES.length - 1;
@@ -663,29 +753,56 @@ function applyPrefs() {
 }
 
 function buildControls() {
-  const step = (key, delta, text, label) => {
-    const button = el('button', { type: 'button', dataset: { step: `${key}${delta > 0 ? '+' : '-'}` }, 'aria-label': label || text }, text);
+  const step = (key, delta, content, label) => {
+    const button = el('button', { type: 'button', className: `reader-step reader-step-${key}`, dataset: { step: `${key}${delta > 0 ? '+' : '-'}` }, 'aria-label': label }, ...content);
     button.addEventListener('click', () => {
       const max = (key === 'size' ? SIZES : WIDTHS).length - 1;
       setPref(key, Math.min(max, Math.max(0, prefs()[key] + delta)));
     });
     return button;
   };
-  const choice = (key, value, text) => {
-    const button = el('button', { type: 'button', dataset: { pref: key, value }, 'aria-pressed': 'false' }, text);
-    // Pressing the chosen page colour again goes back to following the system.
-    button.addEventListener('click', () => setPref(key, key === 'theme' && prefs().theme === value ? null : value));
+  const choice = (key, value, className, ...content) => {
+    const button = el('button', { type: 'button', className, dataset: { pref: key, value }, 'aria-pressed': 'false' }, ...content);
+    button.addEventListener('click', () => setPref(key, key === 'theme' && value === 'auto' ? null : value));
     return button;
   };
-  const row = (label, ...buttons) => el('div', { className: 'reader-control' }, el('span', {}, label), el('div', {}, ...buttons));
-  return el(
+  const section = (label, className, ...buttons) => {
+    const id = `reader-set-${className}`;
+    return el('div', { className: `reader-set reader-set-${className}`, role: 'group', 'aria-labelledby': id },
+      el('p', { className: 'reader-set-label', id }, label), el('div', { className: 'reader-set-row' }, ...buttons));
+  };
+  const close = el('button', { type: 'button', className: 'reader-sheet-close', 'aria-label': S.readerSheetClose }, icon(ICON_CLOSE, 16));
+  close.addEventListener('click', () => closeControls());
+  const swatch = () => el('span', { className: 'reader-swatch', 'aria-hidden': 'true' }, el('span', { className: 'reader-swatch-text' }, S.readerThemeSwatch));
+  const widthIcon = (narrow) => el('span', { className: `reader-width-icon${narrow ? ' narrow' : ''}`, 'aria-hidden': 'true' }, el('i'), el('i'), el('i'));
+  const sheet = el(
     'div',
-    { className: 'reader-controls', role: 'group', 'aria-label': S.readerSettingsLabel },
-    row(S.readerSize, step('size', -1, S.readerSmaller, S.readerSmallerLabel), step('size', 1, S.readerLarger, S.readerLargerLabel)),
-    row(S.readerWidth, step('width', -1, S.readerNarrower), step('width', 1, S.readerWider)),
-    row(S.readerFont, choice('font', 'serif', S.readerFonts.serif), choice('font', 'sans', S.readerFonts.sans)),
-    row(S.readerTheme, ...['light', 'sepia', 'dark'].map((t) => choice('theme', t, S.readerThemes[t])))
+    { className: 'reader-controls', role: 'dialog', 'aria-label': S.readerSettingsLabel, tabIndex: -1 },
+    el('div', { className: 'reader-grabber', 'aria-hidden': 'true' }),
+    el('div', { className: 'reader-sheet-head' }, el('h2', {}, S.readerSheetTitle), close),
+    section(S.readerSize, 'size',
+      step('size', -1, [el('span', { className: 'reader-a small', 'aria-hidden': 'true' }, 'A')], S.readerSmallerLabel),
+      step('size', 1, [el('span', { className: 'reader-a large', 'aria-hidden': 'true' }, 'A')], S.readerLargerLabel)),
+    section(S.readerWidth, 'width',
+      step('width', -1, [widthIcon(true), el('span', {}, S.readerNarrower)], S.readerNarrower),
+      step('width', 1, [widthIcon(false), el('span', {}, S.readerWider)], S.readerWider)),
+    section(S.readerFont, 'font',
+      choice('font', 'serif', 'reader-card reader-font-serif', el('span', { className: 'reader-card-aa', 'aria-hidden': 'true' }, 'Aa'), el('span', {}, S.readerFonts.serif)),
+      choice('font', 'sans', 'reader-card reader-font-sans', el('span', { className: 'reader-card-aa', 'aria-hidden': 'true' }, 'Aa'), el('span', {}, S.readerFonts.sans))),
+    section(S.readerTheme, 'theme',
+      ...['auto', 'light', 'sepia', 'quiet', 'dark'].map((t) => choice('theme', t, `reader-theme-card theme-${t}`, swatch(), el('span', { className: 'reader-theme-name' }, S.readerThemes[t]))))
   );
+  // Tab stays inside the open sheet.
+  sheet.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const items = [...sheet.querySelectorAll('button:not(:disabled)')];
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === sheet)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  return sheet;
 }
 
 function readJSON(key, fallback) {

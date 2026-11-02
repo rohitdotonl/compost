@@ -1,7 +1,7 @@
 // The Heap tab: what was tossed, dropped or expired. No restore, on purpose.
 import { S } from './strings.js';
 import { el } from './api.js';
-import { shortDate } from './format.js';
+import { cover, displayTitle, shortDate } from './format.js';
 
 export function createHeapPanel() {
   const list = el('ul', { className: 'list heap' });
@@ -18,9 +18,14 @@ export function createHeapPanel() {
         el(
           'li',
           { className: 'item', dataset: { id: String(item.id) } },
-          el('p', { className: 'title' }, item.title),
-          el('a', { className: 'url', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.url),
-          el('p', { className: 'meta' }, S.leftOn(shortDate(item.ended_at)))
+          cover(item, { size: 'sm' }),
+          el(
+            'div',
+            { className: 'heap-body' },
+            el('p', { className: 'title' }, displayTitle(item)),
+            el('a', { className: 'url', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.url),
+            el('p', { className: 'meta' }, S.leftOn(shortDate(item.ended_at)))
+          )
         )
       )
     );

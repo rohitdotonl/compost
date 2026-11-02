@@ -77,13 +77,12 @@ function showReceipt({ item, used, limit }) {
     el(
       'div',
       { className: 'receipt saved' },
-      thumbnail(item),
-      el('div', {},
+      el('div', { className: 'cover-wrap' }, thumbnail(item)),
+      el('div', { className: 'receipt-text' },
         el('p', { className: 'title' }, item.title === item.url ? urlPath(item.url) : item.title),
         el('p', { className: 'meta' }, S.slotReceipt(used, limit, untilDay(item.expires_at))))
     ),
-    el('p', { className: 'meta' }, S.intentQuestion),
-    chips,
+    el('div', { className: 'intent' }, el('p', { className: 'meta' }, S.intentQuestion), chips),
     closeLink()
   );
 }
@@ -95,11 +94,11 @@ function showFull(rack) {
     const radio = el('input', { type: 'radio', name: 'drop', value: String(item.id) });
     radio.addEventListener('change', () => (dropBtn.disabled = false));
     list.append(
-      el('li', {}, el('label', {}, radio, el('span', {}, item.title, el('span', { className: 'site' }, item.site))))
+      el('li', {}, el('label', {}, radio, el('span', { className: 'choice-text' }, el('span', { className: 'choice-title' }, item.title), el('span', { className: 'site' }, item.site))))
     );
   }
   const cancel = el('button', { type: 'button', onclick: close }, S.cancel);
-  const form = el('form', {}, el('p', { className: 'receipt' }, S.rackFull), list, el('div', { className: 'actions' }, dropBtn, cancel));
+  const form = el('form', { className: 'full' }, el('p', { className: 'receipt' }, S.rackFull), list, el('div', { className: 'actions' }, dropBtn, cancel));
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const picked = form.querySelector('input[name="drop"]:checked');
@@ -109,12 +108,12 @@ function showFull(rack) {
 }
 
 function closeLink() {
-  const link = el('a', { href: '/' }, S.close);
+  const link = el('a', { href: '/', className: 'button' }, S.close);
   link.addEventListener('click', (e) => {
     e.preventDefault();
     close();
   });
-  return el('p', {}, link);
+  return el('p', { className: 'actions' }, link);
 }
 
 // Closes the popup or share window. If the browser won't let a script close
@@ -125,7 +124,10 @@ function close() {
 }
 
 function show(...nodes) {
-  root.replaceChildren(el('h1', {}, S.appName), ...nodes);
+  root.replaceChildren(
+    el('header', { className: 'page-brand' }, el('img', { src: '/icons/icon.svg', alt: '', width: 28, height: 28 }), el('h1', {}, S.appName)),
+    el('div', { className: 'page-card' }, ...nodes)
+  );
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

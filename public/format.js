@@ -103,3 +103,50 @@ export function urlPath(url) {
     return url;
   }
 }
+
+// True when an article leaves the rack before the day is out.
+export function expiresToday(expiresAt, now = Date.now()) {
+  return startOfDay(expiresAt) <= startOfDay(now);
+}
+
+// The title to show: the path when the page never gave one.
+export function displayTitle(item) {
+  return !item.title || item.title === item.url ? urlPath(item.url) : item.title;
+}
+
+// A book cover for an article, 2:3 portrait. With a preview image, the image
+// fills the top and a tinted band carries the title; without one, the cover
+// is typeset on a tint taken from the site. `size: 'sm'` drops to the image
+// alone, or the site's initial, for thumbnails. Decorative: whatever wraps it
+// carries the title for assistive tech.
+export function cover(item, { size = '' } = {}) {
+  const small = size === 'sm';
+  const title = displayTitle(item);
+  const site = String(item.site || '').replace(/^www\./, '');
+  const node = el('span', { className: `cover${small ? ' cover-sm' : ''}`, 'aria-hidden': 'true' });
+  node.style.setProperty('--hue', siteHue(item.site));
+  const typeset = () => {
+    node.classList.remove('has-image');
+    node.classList.add('typeset');
+    if (small) return [el('span', { className: 'cover-initial' }, (site || title || '?')[0].toUpperCase())];
+    return [
+      el('span', { className: 'cover-site' }, site),
+      el('span', { className: 'cover-title' }, title),
+      el('span', { className: 'cover-rule' }),
+      item.author ? el('span', { className: 'cover-author' }, item.author) : null,
+    ].filter(Boolean);
+  };
+  const img = proxiedImg(item.image_url, { className: 'cover-img', loading: 'lazy', decoding: 'async' }, () => node.replaceChildren(...typeset()));
+  if (!img) node.append(...typeset());
+  else if (small) {
+    node.classList.add('has-image');
+    node.append(img);
+  } else {
+    node.classList.add('has-image');
+    node.append(
+      el('span', { className: 'cover-art' }, img),
+      el('span', { className: 'cover-band' }, el('span', { className: 'cover-site' }, site), el('span', { className: 'cover-title' }, title))
+    );
+  }
+  return node;
+}

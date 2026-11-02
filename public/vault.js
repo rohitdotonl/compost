@@ -2,7 +2,7 @@
 import { S } from './strings.js';
 import { el } from './api.js';
 import * as store from './store.js';
-import { shortDate } from './format.js';
+import { cover, displayTitle, shortDate } from './format.js';
 import { matches, parseQuery } from './search.js';
 import { exportJson, exportMarkdown, exportObsidian } from './export.js';
 import { createShelf } from './shelf.js';
@@ -16,6 +16,9 @@ function savedView() {
 export function createVaultPanel() {
   let query = '';
   const search = el('input', { type: 'search', placeholder: S.vaultSearch, 'aria-label': S.vaultSearch });
+  const glass = el('span', { className: 'search-icon', 'aria-hidden': 'true' });
+  glass.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8.6" cy="8.6" r="5.6"/><path d="m13 13 4 4"/></svg>';
+  const searchBox = el('label', { className: 'search' }, glass, search);
   search.addEventListener('input', () => {
     query = search.value;
     // Keeps the search linkable as #vault?q=…
@@ -38,12 +41,12 @@ export function createVaultPanel() {
     exportLink(S.exportJson, exportJson), ' · ',
     exportLink(S.exportObsidian, exportObsidian)
   );
-  const list = el('ul', { className: 'list' });
+  const list = el('ul', { className: 'list vault-list' });
   // Phase 7: List / Shelf
   let view = savedView();
   const shelf = createShelf();
   const viewLink = (name, label) => {
-    const b = el('button', { type: 'button', className: 'link' }, label);
+    const b = el('button', { type: 'button' }, label);
     b.addEventListener('click', () => {
       view = name;
       try { localStorage.setItem(VIEW_KEY, name); } catch {}
@@ -52,14 +55,14 @@ export function createVaultPanel() {
     return b;
   };
   const views = { list: viewLink('list', S.viewList), shelf: viewLink('shelf', S.viewShelf) };
-  const toggle = el('div', { className: 'view-toggle', role: 'group', 'aria-label': S.viewLabel }, views.list, views.shelf);
+  const toggle = el('div', { className: 'segmented view-toggle', role: 'group', 'aria-label': S.viewLabel }, views.list, views.shelf);
   let editingId = null; // Vault row whose takeaway is being rewritten (Phase 6)
   let draft = '';       // its text, kept across re-renders
   let rendering = false;
   const element = el(
     'section',
     { className: 'panel' },
-    el('div', { className: 'row' }, search, toggle),
+    el('div', { className: 'vault-bar' }, searchBox, toggle),
     list,
     shelf.element,
     el('p', { className: 'footer' }, download)
@@ -90,14 +93,21 @@ export function createVaultPanel() {
     }
   }
 
-  // The takeaway is what was earned, so it leads; the title follows, small.
+  // The takeaway is what was earned, so it leads, in the serif, beside a
+  // small cover; the title and site follow, small.
   function row(item) {
+    const thumb = el('a', { className: 'title thumb-link', href: item.url, target: '_blank', rel: 'noopener noreferrer', tabIndex: -1, 'aria-hidden': 'true' }, cover(item, { size: 'sm' }));
     return el(
       'li',
       { className: `item vault-item${item.takeaway ? '' : ' no-takeaway'}`, dataset: { id: String(item.id) } },
-      editingId === item.id ? takeawayField(item) : item.takeaway ? takeawayQuote(item) : null,
-      el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, item.title),
-      el('p', { className: 'meta' }, `${item.site} · ${item.outcome === 'kept' ? S.keptUnfinished : S.finishedOn(shortDate(item.ended_at))}`)
+      thumb,
+      el(
+        'div',
+        { className: 'vault-body' },
+        editingId === item.id ? takeawayField(item) : item.takeaway ? takeawayQuote(item) : null,
+        el('a', { className: 'title', href: item.url, target: '_blank', rel: 'noopener noreferrer' }, displayTitle(item)),
+        el('p', { className: 'meta' }, `${item.site} · ${item.outcome === 'kept' ? S.keptUnfinished : S.finishedOn(shortDate(item.ended_at))}`)
+      )
     );
   }
 

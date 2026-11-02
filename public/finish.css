@@ -6,16 +6,28 @@
 .page-stack {
   position: fixed;
   z-index: 1;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom);
   left: 50%;
   transform: translateX(-50%);
-  width: min(var(--r-measure, 66ch), calc(100vw - 32px));
+  width: min(var(--r-measure, 66ch), calc(100vw - 40px));
   font-family: var(--r-serif);
   font-size: calc(var(--r-base, 19px) * var(--r-scale, 1));
-  height: 22px;
+  height: 64px;
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--r-bg) 45%);
+  background: linear-gradient(to bottom, transparent, var(--r-bg) 36%);
+  transition: opacity 0.6s ease;
 }
+/* Phones: the strip under the stack (the home indicator's area) matches the page. */
+.page-stack::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: -20px;
+  right: -20px;
+  height: env(safe-area-inset-bottom);
+  background: var(--r-bg);
+}
+
 .page-stack-pages {
   --edge: 2.5px;
   position: absolute;
@@ -23,8 +35,8 @@
   right: 0;
   bottom: 4px;
   height: calc(var(--edges, 5) * var(--edge));
-  background: repeating-linear-gradient(to top, color-mix(in srgb, var(--r-muted) 45%, transparent) 0 1px, transparent 1px var(--edge));
-  border-radius: 1px;
+  background: repeating-linear-gradient(to top, color-mix(in srgb, var(--r-muted) 40%, transparent) 0 1px, transparent 1px var(--edge));
+  border-radius: 2px;
   transition: height 0.4s ease;
 }
 /* Section ticks: small notches standing just above the pages, so they thin with them. */
@@ -43,16 +55,17 @@
   --stamp-ink: #a5402d;
 }
 :root[data-reader-theme="dark"] .reader { --stamp-ink: #e08a72; }
+:root[data-reader-theme="quiet"] .reader { --stamp-ink: #eb9a80; }
 :root[data-reader-theme="sepia"] .reader { --stamp-ink: #9a3a26; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-reader-theme="light"]):not([data-reader-theme="sepia"]) .reader { --stamp-ink: #e08a72; }
+  :root:not([data-reader-theme="light"]):not([data-reader-theme="sepia"]):not([data-reader-theme="quiet"]) .reader { --stamp-ink: #e08a72; }
 }
 .stamp {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: max-content;
-  margin: 2.5em auto 0;
+  margin: 2.8em auto 0.4em;
   padding: 8px 18px 7px;
   color: var(--stamp-ink);
   border: 2.5px solid currentColor;

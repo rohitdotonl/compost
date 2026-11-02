@@ -12,6 +12,14 @@ export const S = {
   tabRack: 'Rack',
   tabVault: 'Vault',
   tabHeap: 'Heap',
+  tabGuide: 'Guide',
+  navLabel: 'Compost',
+  navLibrary: 'Library',
+  navHelp: 'Help',
+  guideLink: 'How Compost works',
+  slotsUsed: (used, limit) => `${used} of ${limit}`,
+  vaultCount: (n) => (n === 1 ? '1 finished' : `${n} finished`),
+  heapCount: (n) => (n === 1 ? '1 item' : `${n} items`),
 
   // Rack
   addPlaceholder: 'Paste a link',
@@ -32,6 +40,20 @@ export const S = {
   intentNone: 'Any time',
   refreshDetails: 'Refresh details',
   refreshNothing: 'Couldn’t find more about that page.',
+  // Library redesign: covers, the more menu, Continue Reading
+  libRead: 'Read',
+  libOpenOriginal: 'Open original',
+  libMore: (title) => `More: ${title}`,
+  libNew: 'New',
+  libPercent: (p) => `${p}%`,
+  libPercentLabel: (p) => `${p}% read`,
+  libContinue: 'Continue Reading',
+  libResume: 'Resume',
+  libRackLabel: 'Your rack',
+  libWhen: 'Read it when',
+  libTakeawayTitle: 'Finished',
+  libSearchLabel: 'Search',
+  libMenuLabel: (title) => `Actions for ${title}`,
 
   // Done
   takeawayPrompt: 'What’s the one takeaway worth keeping?',
@@ -165,10 +187,15 @@ export const S = {
   readerWidth: 'Width',
   readerNarrower: 'Narrower',
   readerWider: 'Wider',
-  readerFont: 'Type',
+  readerFont: 'Font',
   readerFonts: { serif: 'Serif', sans: 'Sans' },
   readerTheme: 'Page',
-  readerThemes: { light: 'Light', sepia: 'Sepia', dark: 'Dark' },
+  readerThemes: { auto: 'Auto', light: 'Light', sepia: 'Sepia', quiet: 'Quiet', dark: 'Dark' },
+  readerSheetTitle: 'Themes & Settings',
+  readerSheetClose: 'Close reading settings',
+  readerThemeSwatch: 'Aa',
+  readerMinutesLeft: (n) => `${n} min left`,
+  readerLastPage: 'Last page',
   readerLoading: 'Getting the text…',
   readerFailed: 'Couldn’t extract this one. Opened the original.',
   readerFailedBlocked: 'Couldn’t extract this one.',
@@ -222,5 +249,120 @@ export const S = {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return m ? `${h} h ${m} min` : `${h} h`;
+  },
+  // The Guide tab (guide.js).
+  guide: {
+    tab: 'Guide',
+    kicker: 'How Compost works',
+    title: 'Read less. Keep more.',
+    intro: ({ slots, days }) => `Compost holds ${slots} articles at a time, and each one has ${days} days to be read. Only the ones you finish are kept, each with a one-line takeaway.`,
+    indexLabel: 'Steps',
+    stepWord: (n) => `Step ${n}`,
+    steps: [
+      {
+        id: 'start',
+        title: 'Unlock and install',
+        body: [
+          'Enter your passcode once on each device. Compost remembers it.',
+          'On a phone, open your browser’s share or ⋮ menu and choose Add to Home screen. Compost then opens full screen, like an app, and on Android it appears in the share menu so you can save from any app.',
+        ],
+      },
+      {
+        id: 'save',
+        title: 'Save an article',
+        body: [
+          'Paste a link in the field at the top of the Rack, or just paste anywhere in Compost.',
+          'On a computer, drag the bookmarklet to your bookmarks bar and click it on any page. With the Chrome extension, press Alt+Shift+S or right-click a link or page.',
+        ],
+        link: { href: '/bookmarklet', text: 'Get the bookmarklet' },
+      },
+      {
+        id: 'rack',
+        title: 'Your Rack',
+        body: [
+          ({ slots, days }) => `The Rack is ${slots} covers, no more. Each shows how long it has left, and fades as its ${days} days run out.`,
+          ({ ext }) => `Need longer? Give one ${ext} more, once. Tag it Tonight, Commute or Weekend so you know when you’ll get to it. When the Rack is full, saving asks you to drop one first.`,
+        ],
+      },
+      {
+        id: 'read',
+        title: 'Read',
+        body: [
+          'Tap a cover to read it as a clean page. Aa sets the text size, page width, typeface and a light, sepia or dark page.',
+          'Compost picks up where you stopped, on any device. Rack articles work offline once opened. Shift+O opens the original site.',
+        ],
+      },
+      {
+        id: 'mark',
+        title: 'Highlight and note',
+        body: [
+          'Select some text, then choose Highlight, or press h. Press n to add a note to it.',
+          'Press s, or tap Star, to mark a highlight as the article’s takeaway.',
+        ],
+        keys: [['h', 'Highlight'], ['n', 'Note'], ['s', 'Star']],
+      },
+      {
+        id: 'finish',
+        title: 'Finish or let go',
+        body: [
+          'Done asks for the one takeaway worth keeping. Write a line, or pick one of your highlights, and the article is stamped Read and moves to the Vault.',
+          'Toss sends it to the Heap and frees the slot. Changed your mind? Undo, right away, brings it back.',
+        ],
+      },
+      {
+        id: 'vault',
+        title: 'The Vault',
+        body: [
+          'Everything you finished, as a list or a shelf of covers by month. Click a takeaway to rewrite it.',
+          'Search by words, or narrow it down with filters. Export it all as Markdown, JSON or an Obsidian folder.',
+        ],
+        search: ['site:nytimes.com', 'intent:weekend', 'before:2026-09', 'after:2026-03'],
+      },
+      {
+        id: 'heap',
+        title: 'The Heap',
+        body: [
+          'Tossed and expired articles land here. It clears itself after 30 days, and nothing comes back. That’s the point.',
+          'Expired articles you highlighted go to the Vault instead, marked kept, unfinished.',
+        ],
+      },
+      {
+        id: 'extras',
+        title: 'Little extras',
+        body: [
+          ({ daily }) => `Once your Vault holds ${daily} takeaways, each day brings back one line from it. Keep it, or let it go.`,
+          'On Sundays, the Rack tells you how long you read that week. And at the bottom of the page you can turn on a daily reminder, sent only when something is about to leave.',
+        ],
+      },
+      {
+        id: 'keys',
+        title: 'Keyboard',
+        body: ['Everything has a key. Press ? at any time to see them all.'],
+      },
+    ],
+    keysCaption: 'Keyboard shortcuts',
+    keyCol: 'Key',
+    actionCol: 'What it does',
+    hours: (h) => `+${h}h`,
+    illo: {
+      passcode: 'Passcode',
+      unlock: 'Unlock',
+      addHome: 'Add to Home screen',
+      share: 'Share',
+      copy: 'Copy link',
+      paste: 'Paste a link',
+      add: 'Add',
+      left: ['6 days', '3 days', 'tonight'],
+      settings: 'Aa',
+      takeaway: 'What’s the one takeaway worth keeping?',
+      keep: 'Keep',
+      read: 'Read',
+      undo: 'Undo',
+      tossed: 'Good call. Attention saved.',
+      clears: 'clears in 30 days',
+      daily: 'A line from your Vault',
+      weekly: 'You read for 3 h 10 min this week.',
+      reminder: 'Daily reminder at 8:00',
+    },
   },
 };
