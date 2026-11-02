@@ -1,6 +1,7 @@
-// The Vault drawn as a bookshelf (Phase 7). Each finished article is a spine:
-// wider for longer reads, a little worn for ones with highlights, tinted by
-// site. One shelf per month, newest at the top. Nothing here counts.
+// The Vault drawn as a bookshelf (Phase 7): a grid of covers under a bold
+// header per month, newest at the top. Each finished article is a "spine"
+// button holding its cover, a little worn when it has highlights. The width
+// and height helpers below are kept for the tests and other views.
 //
 // The pure helpers at the top are exported for tests/shelf.test.js. The view
 // keeps its DOM between renders while the items are unchanged, so focus and
@@ -8,6 +9,7 @@
 import { S } from './strings.js';
 import { el } from './api.js';
 import * as store from './store.js';
+import { cover } from './format.js';
 
 export const TINTS = 8;          // --tint-0 … --tint-7 in shelf.css
 const WIDTH = { min: 18, max: 64, base: 18, perMinute: 3, unknown: 24 };
@@ -121,10 +123,8 @@ export function createShelf() {
         'aria-label': S.spineLabel(item.title, item.site, dayLabel(finishedAt(item))),
         'aria-describedby': 'spine-tip',
       },
-      el('span', { className: 'spine-title', 'aria-hidden': 'true' }, item.title)
+      cover(item)
     );
-    button.style.setProperty('--w', `${spineWidth(item.minutes)}px`);
-    button.style.setProperty('--hf', spineHeight(item).toFixed(2));
     button.addEventListener('click', () => {
       store.select(item.id);
       store.open(item.id);
